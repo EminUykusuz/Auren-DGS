@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ---- Tema değişkenleri (RGB üçlüleri; Tailwind <alpha-value> ile birlikte çalışır) ---- */
+:root, [data-theme='obsidian'], [data-theme='emerald'], [data-theme='midnight'] {
+  color-scheme: dark;
+  --fg: 255 255 255; --bg: 9 10 15;
+  --s50: 248 250 252; --s100: 241 245 249; --s200: 226 232 240; --s300: 203 213 225; --s400: 148 163 184; --s500: 130 144 166;
+  --s600: 100 116 139; --s700: 71 85 105; --s800: 51 65 85; --s900: 30 41 59; --s950: 15 23 42;
+  --accent: 16 185 129; --cyan2: 6 182 212;
+  --glow-a: 16 185 129; --glow-b: 6 182 212; --glow-c: 99 102 241; --glow-a-o: .22; --glow-b-o: .2; --glow-c-o: .1;
+  --card-shadow: 0 20px 50px rgba(0,0,0,0.5); --card-hi: rgba(255,255,255,0.1);
+}
+[data-theme='emerald']  { --bg: 3 12 10; --glow-a: 52 211 153; --glow-b: 20 184 166; --glow-c: 163 230 53; --glow-a-o: .3; --glow-b-o: .24; --glow-c-o: .08; }
+[data-theme='midnight'] { --bg: 8 12 28; --glow-a: 59 130 246; --glow-b: 99 102 241; --glow-c: 56 189 248; --glow-a-o: .26; --glow-b-o: .22; --glow-c-o: .1; }
+[data-theme='light'] {
+  color-scheme: light;
+  --fg: 15 23 42; --bg: 241 245 249;
+  --s50: 15 23 42; --s100: 30 41 59; --s200: 51 65 85; --s300: 71 85 105; --s400: 88 103 125; --s500: 100 116 139;
+  --s600: 148 163 184; --s700: 203 213 225; --s800: 226 232 240; --s900: 255 255 255; --s950: 255 255 255;
+  --accent: 5 150 105; --cyan2: 8 145 178;
+  --glow-a-o: .18; --glow-b-o: .16; --glow-c-o: .08;
+  --card-shadow: 0 16px 40px rgba(15,23,42,0.10); --card-hi: rgba(255,255,255,0.9);
+}
+html[data-glow='off'] .ambient-glow { display: none; }
+
+/* Açık temada renkli metinler için okunabilir tonlar */
+[data-theme='light'] .text-amber-300 { color: #b45309; }
+[data-theme='light'] .text-emerald-300 { color: #047857; }
+[data-theme='light'] .text-cyan-300 { color: #0e7490; }
+[data-theme='light'] .text-red-300 { color: #b91c1c; }
+[data-theme='light'] .recharts-cartesian-grid line { stroke: rgba(15,23,42,.1); }
+
+@layer base {
+  html { font-size: 15px; }
+  @media (min-width: 1536px) { html { font-size: 16px; } }
+  html, body, #root { min-height: 100%; }
+  .grid > * { min-width: 0; }   /* grafik/tablolu grid çocukları taşmasın (mobil yatay kaydırma) */
+  body { @apply bg-obsidian text-slate-300 antialiased; line-height: 1.5; transition: background-color .25s; }
+  input, select { @apply w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-100 transition placeholder:text-slate-500 focus:border-accent/60 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-accent/20; }
+  select option, select optgroup { @apply bg-slate-900 text-slate-100; }
+  input[type='checkbox'] { @apply hidden; }
+  input[type='range'] { @apply h-2 cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 backdrop-blur-none; accent-color: rgb(var(--accent)); }
+  label { @apply mb-1.5 block text-xs font-medium text-slate-400; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { @apply rounded-full bg-white/10; }
+}
+
+@layer components {
+  /* Liquid Glass yüzey: yarı saydam slate + bulanıklık + üst speküler parlama + iç gölge */
+  .card { @apply relative isolate rounded-[28px] border border-white/[0.08] bg-slate-900/40 p-5 backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 0 var(--card-hi), inset 0 0 24px rgb(var(--fg) / 0.015), var(--card-shadow); }
+  .card::before { content: ''; pointer-events: none; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+    background: linear-gradient(155deg, rgb(var(--fg) / 0.09) 0%, rgb(var(--fg) / 0.02) 28%, transparent 55%); }
+  .glass-pill { @apply relative rounded-full border border-white/[0.08] bg-slate-900/40 backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 0 var(--card-hi), var(--card-shadow); }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-onaccent transition hover:brightness-110 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 8px 24px -8px rgb(var(--accent) / 0.5); }
+  .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-slate-200 transition hover:bg-white/[0.09] active:scale-[0.97]; }
+  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-full border border-red-400/20 bg-red-500/10 px-4 py-2 text-sm text-red-300 transition hover:bg-red-500/20 active:scale-[0.97]; }
+  .num { font-variant-numeric: tabular-nums; }
+  /* GPU katmanı: blur'lu yüzeyler kendi kompozit katmanında kalır, kaydırmada yeniden boyanmaz (görünüm değişmez) */
+  .card, .glass-pill { transform: translateZ(0); backface-visibility: hidden; }
+  /* Sabit arka plan katmanı tek bir GPU katmanı: kaydırmada yeniden boyanmaz */
+  .ambient-layer { transform: translateZ(0); contain: layout paint style; }
+  /* Ekran dışındaki ağır kartlar boyanmaz (kaydırma akıcı kalır; görünüm aynı) */
+  .lazy-paint { content-visibility: auto; contain-intrinsic-size: auto 240px; }
+  /* Mobilde blur yarıya iner: görünüm benzer, GPU yükü belirgin düşer */
+  @media (max-width: 767px) { .card, .glass-pill { @apply backdrop-blur-md; } }
+  .gpu { transform: translateZ(0); will-change: transform, opacity; }
+  .card-fixed { transform: translateZ(0); will-change: transform; }
+  .stat-label { @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400; }
+  .stat-value { @apply num text-3xl font-semibold tracking-tight text-slate-50; }
+  .th { @apply pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500; }
+  .row { @apply border-t border-white/[0.06]; }
+  .badge { @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold; }
+}
+
+
+@media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fade-in .18s ease-out; }
+
+@keyframes breath { 0%,100% { transform: scale(.9); opacity: .7; } 50% { transform: scale(1.08); opacity: 1; } }
+.focus-breath { animation: breath 8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .focus-breath { animation: none; } }
+
+/* Performans modu: blur, parıltı ve animasyonlar kapalı; yüzeyler yarı opak düz renk (akıcı 60fps kaydırma) */
+html[data-perf='on'] [class*='backdrop-blur'], html[data-perf='on'] .card, html[data-perf='on'] .glass-pill,
+html[data-perf='on'] .recharts-tooltip-wrapper * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html[data-perf='on'] .card, html[data-perf='on'] .glass-pill { background-color: rgb(var(--s900) / 0.9); transform: none; backface-visibility: visible; box-shadow: inset 0 1px 0 0 var(--card-hi); }
+html[data-perf='on'] .card::before { display: none; }
+html[data-perf='on'] .gpu, html[data-perf='on'] .card-fixed { will-change: auto; }
+html[data-perf='on'] .ambient-glow, html[data-perf='on'] .focus-breath { display: none; }
+html[data-perf='on'] *, html[data-perf='on'] *::before, html[data-perf='on'] *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
