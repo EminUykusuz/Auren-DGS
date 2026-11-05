@@ -1,10 +1,10 @@
-import { lazy, useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './store.js';
 import { Shell, Ambient } from './components/Layout.jsx';
-import Landing from './pages/Landing.jsx';
 import { Login, Register, Forgot, Reset } from './pages/AuthPages.jsx';
 
+const Landing = lazy(() => import('./pages/Landing.jsx'));
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Study = lazy(() => import('./pages/Study.jsx'));
 const Timer = lazy(() => import('./pages/Timer.jsx'));
@@ -22,7 +22,7 @@ export default function App() {
   if (!user) return (
     <><Ambient />
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Suspense fallback={null}><Landing /></Suspense>} />
         <Route path="/giris" element={<Login />} />
         <Route path="/kayit" element={<Register />} />
         <Route path="/sifremi-unuttum" element={<Forgot />} />
