@@ -1,7 +1,8 @@
 // Cookie tabanlı oturum: token JS'ten erişilemez (HttpOnly)
+const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 export async function api(method, path, body) {
-  const res = await fetch('/api' + path, {
-    method, credentials: 'same-origin',
+  const res = await fetch(BASE + '/api' + path, {
+    method, credentials: BASE ? 'include' : 'same-origin',
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });

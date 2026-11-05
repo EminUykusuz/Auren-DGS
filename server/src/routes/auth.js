@@ -39,7 +39,7 @@ r.post('/login', authLimiter, validate(z.object({ identifier: z.string().trim().
   res.json({ user: pub(u) });
 }));
 
-r.post('/logout', (req, res) => { res.clearCookie(config.cookieName, { path: '/' }); res.json({ ok: true }); });
+r.post('/logout', (req, res) => { res.clearCookie(config.cookieName, { path: '/', secure: config.cookieSecure, sameSite: config.cookieSameSite }); res.json({ ok: true }); });
 
 r.get('/me', requireAuth, wrap(async (req, res) => {
   const [u] = await query(`SELECT Id, Username, Email, IsAdmin FROM dbo.Users WHERE Id=@id`, { id: req.userId });

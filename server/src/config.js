@@ -15,8 +15,11 @@ export const config = {
   jwtSecret,
   jwtTtl: '7d',
   cookieName: 'dgs_token',
-  origins: (process.env.CORS_ORIGINS || 'http://localhost:5050,http://127.0.0.1:5050,http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim()),
+  origins: (process.env.CORS_ORIGINS || 'https://auren-dgs-jiwm.vercel.app,http://localhost:5050,http://127.0.0.1:5050,http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim()),
   appUrl: process.env.APP_URL || 'http://localhost:5173',
+  // Çerez: HTTPS olmayan VDS'te COOKIE_SECURE=false; Vercel gibi farklı site için COOKIE_SAMESITE=none (+ HTTPS şart)
+  cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProd,
+  cookieSameSite: process.env.COOKIE_SAMESITE || 'strict',
   bcryptRounds: 12,
   resetTtlMinutes: 15,
   mail: {
@@ -27,6 +30,9 @@ export const config = {
   db: {
     database: process.env.DB_NAME || 'DgsTouch',
     server: process.env.DB_SERVER || 'localhost',
+    port: Number(process.env.DB_PORT) || 1433,
+    // Windows Authentication: DB_TRUSTED_CONNECTION=true veya DB_USER boşsa
+    trusted: process.env.DB_TRUSTED_CONNECTION === 'true' || !process.env.DB_USER,
     user: process.env.DB_USER || '',
     password: process.env.DB_PASSWORD || '',
   },

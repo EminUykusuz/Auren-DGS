@@ -9,7 +9,7 @@ export const apiLimiter = rateLimit({ windowMs: 60_000, limit: 200, standardHead
 
 export function setAuthCookie(res, userId) {
   const token = jwt.sign({ sub: userId }, config.jwtSecret, { expiresIn: config.jwtTtl, algorithm: 'HS256' });
-  res.cookie(config.cookieName, token, { httpOnly: true, secure: config.isProd, sameSite: 'strict', maxAge: 7 * 864e5, path: '/' });
+  res.cookie(config.cookieName, token, { httpOnly: true, secure: config.cookieSecure, sameSite: config.cookieSameSite, maxAge: 7 * 864e5, path: '/' });
 }
 
 export async function requireAuth(req, res, next) {

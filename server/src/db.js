@@ -1,18 +1,18 @@
 import { config } from './config.js';
 
-// DB_USER verilmişse SQL Login, yoksa Windows Authentication (msnodesqlv8).
+// DB_TRUSTED_CONNECTION=true ya da DB_USER boşsa Windows Authentication (msnodesqlv8); aksi halde SQL Login.
 let sql, pool;
 export async function getPool(database = config.db.database) {
   if (pool && database === config.db.database) return pool;
-  const { server, user, password } = config.db;
+  const { server, port, user, password, trusted } = config.db;
   let p;
-  if (user) {
+  if (user && !trusted) {
     sql = (await import('mssql')).default;
-    p = new sql.ConnectionPool({ server, user, password, database, options: { encrypt: true, trustServerCertificate: true }, pool: { max: 10 } });
+    p = new sql.ConnectionPool({ server, port, user, password, database, options: { encrypt: true, trustServerCertificate: true }, pool: { max: 10 } });
   } else {
     sql = (await import('mssql/msnodesqlv8.js')).default;
     p = new sql.ConnectionPool({
-      connectionString: `Driver={ODBC Driver 17 for SQL Server};Server=${server};Database=${database};Trusted_Connection=Yes;TrustServerCertificate=Yes;`,
+      connectionString: `Driver={ODBC Driver 17 for SQL Server};Server=${server},${port};Database=${database};Trusted_Connection=Yes;TrustServerCertificate=Yes;`,
       pool: { max: 10 },
     });
   }
