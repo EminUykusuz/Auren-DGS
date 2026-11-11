@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import { ArrowRight, Play, Pause, RotateCcw, Users, BookOpen, Timer, TrendingUp } from 'lucide-react';
+import { ArrowRight, Play, Pause, RotateCcw, Users, BookOpen, Timer, TrendingUp, UserPlus, ClipboardCheck, ChevronDown } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -170,6 +170,49 @@ function TrendDemo() {
   );
 }
 
+/* ---------- Nasıl çalışır ---------- */
+const steps = [
+  { icon: UserPlus, title: 'Hesabını oluştur', text: 'Kullanıcı adı, e-posta ve şifreyle saniyeler içinde kaydol. Sınav tarihini ve hedefini ayarlardan gir.' },
+  { icon: ClipboardCheck, title: 'Denemeni ve çalışmanı kaydet', text: 'Doğru ve yanlışlarını yaz, Auren neti hesaplasın. Her yanlışına bir neden ekle.' },
+  { icon: TrendingUp, title: 'Zayıf yerini gör', text: 'Grafik, hata nedenleri ve müfredat analiziyle önce neye çalışman gerektiğini bil.' },
+];
+function HowItWorks() {
+  return (
+    <ol className="bento grid gap-4 md:grid-cols-3">
+      {steps.map(({ icon: Icon, title, text }, i) => (
+        <li key={title} className="card">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-accent shadow-[0_0_28px_-4px_rgb(var(--accent)/0.65)]"><Icon size={22} aria-hidden="true" /></div>
+            <span className="num text-5xl font-extrabold text-white/10" aria-hidden="true">{i + 1}</span>
+          </div>
+          <h3 className="text-xl font-semibold text-slate-50">{title}</h3>
+          <p className="mt-2 text-sm text-slate-400 sm:text-base">{text}</p>
+        </li>))}
+    </ol>
+  );
+}
+
+/* ---------- SSS ---------- */
+const faqs = [
+  ['Net nasıl hesaplanıyor?', 'Dört yanlış bir doğruyu götürür: net = doğru − yanlış ÷ 4. Auren bunu her denemende senin yerine hesaplar.'],
+  ['Sınav tarihi kesin mi?', 'Sayaç, her yıl tahmini olarak 19 Temmuz tarihine göre çalışır. Kesin tarih açıklanınca hesabından kendi tarihini girebilirsin.'],
+  ['Arkadaşlarım neleri görebilir?', 'Yalnızca arkadaşlık isteğini kabul ettiğin kişiler, karşılaştırma ekranında net ve çalışma süresi özetini görebilir. Başkaları göremez.'],
+  ['Verilerim güvende mi?', 'Şifren geri döndürülemez biçimde (bcrypt) saklanır, oturumun tarayıcı betiklerinin erişemediği güvenli bir çerezde tutulur.'],
+];
+function Faq() {
+  return (
+    <div className="reveal mx-auto max-w-3xl space-y-3">
+      {faqs.map(([q, a]) => (
+        <details key={q} className="card group !p-0">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold text-slate-100 [&::-webkit-details-marker]:hidden">
+            {q}<ChevronDown size={18} aria-hidden="true" className="shrink-0 text-slate-400 transition group-open:rotate-180" />
+          </summary>
+          <p className="px-5 pb-5 text-sm text-slate-400 sm:text-base">{a}</p>
+        </details>))}
+    </div>
+  );
+}
+
 /* ---------- Sayfa ---------- */
 export default function Landing() {
   const root = useRef(null);
@@ -182,7 +225,7 @@ export default function Landing() {
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const lenis = new Lenis({ lerp: 0.09, smoothWheel: true });
+    const lenis = new Lenis({ lerp: 0.09, smoothWheel: true, anchors: { offset: -90 } });
     lenis.on('scroll', ScrollTrigger.update);
     const tick = t => lenis.raf(t * 1000);
     gsap.ticker.add(tick); gsap.ticker.lagSmoothing(0);
@@ -211,6 +254,11 @@ export default function Landing() {
       <header className="sticky top-0 z-20 px-3 pt-3 sm:px-6">
         <nav className="nav-in glass-pill mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:px-6" aria-label="Ana menü">
           <Link to="/" className="text-lg font-bold text-slate-100">Auren <span className="text-accent">DGS</span></Link>
+          <div className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
+            <a href="#nasil" className="transition hover:text-white">Nasıl çalışır</a>
+            <a href="#ozellikler" className="transition hover:text-white">Özellikler</a>
+            <a href="#sss" className="transition hover:text-white">SSS</a>
+          </div>
           <div className="flex items-center gap-2">
             <Link to="/giris" className="btn-ghost">Giriş Yap</Link>
             <Link to="/kayit" className="btn">Hemen Başla</Link>
@@ -229,6 +277,15 @@ export default function Landing() {
           </p>
           <LiveCountdown />
           <Cta big className="hero-cta mt-8" />
+          <ul className="hero-sub mt-8 flex flex-wrap justify-center gap-2 text-xs text-slate-400 sm:text-sm" aria-label="Öne çıkanlar">
+            {['Deneme analizi', 'Hata nedenleri', 'Müfredat takibi', 'Pomodoro', 'Arkadaş karşılaştırma'].map(t => (
+              <li key={t} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">{t}</li>))}
+          </ul>
+        </section>
+
+        <section id="nasil" className="scroll-mt-24 py-20" aria-labelledby="nasilh">
+          <SectionHead title={<span id="nasilh">3 adımda başla</span>} text="Karmaşık kurulum yok. Kaydol, kaydet, gelişimini izle." />
+          <HowItWorks />
         </section>
 
         <section className="py-20" aria-labelledby="net">
@@ -251,7 +308,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="py-20" aria-labelledby="hepsi">
+        <section id="ozellikler" className="scroll-mt-24 py-20" aria-labelledby="hepsi">
           <SectionHead title={<span id="hepsi">Hazırlığın tamamı tek uygulamada</span>} text="Denemeden müfredata, arkadaşlarınla yarışmadan çalışma kaydına kadar." />
           <div className="bento grid gap-4 md:grid-cols-3">
             {bento.map(({ icon: Icon, title, text, wide, extra }) => (
@@ -264,6 +321,11 @@ export default function Landing() {
           </div>
         </section>
 
+        <section id="sss" className="scroll-mt-24 py-20" aria-labelledby="sssh">
+          <SectionHead title={<span id="sssh">Sık sorulanlar</span>} text="Başlamadan önce merak edebileceklerin." />
+          <Faq />
+        </section>
+
         <section className="py-20" aria-labelledby="son">
           <div className="card reveal py-16 text-center">
             <h2 id="son" className="text-3xl font-bold tracking-tight text-slate-50 sm:text-5xl">Saat işliyor. Başlayalım.</h2>
@@ -274,7 +336,11 @@ export default function Landing() {
       </main>
 
       <footer className="px-4 pb-8 text-center text-xs text-slate-500">
-        <div className="glass-pill inline-block px-5 py-2">Developed by <span className="font-medium text-emerald-400">Emin Uykusuz</span></div>
+        <nav className="mb-3 flex justify-center gap-5" aria-label="Alt menü">
+          <a href="#nasil" className="hover:text-slate-300">Nasıl çalışır</a><a href="#ozellikler" className="hover:text-slate-300">Özellikler</a>
+          <a href="#sss" className="hover:text-slate-300">SSS</a><Link to="/giris" className="hover:text-slate-300">Giriş Yap</Link>
+        </nav>
+        <div className="glass-pill inline-block px-5 py-2">© {new Date().getFullYear()} Auren DGS · Developed by <span className="font-medium text-emerald-400">Emin Uykusuz</span></div>
       </footer>
     </div>
   );
