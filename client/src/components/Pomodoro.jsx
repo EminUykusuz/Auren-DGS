@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom';
 import { Play, Pause, SkipForward, RotateCcw, Maximize2, X, Volume2, Settings2, Coffee, Brain } from 'lucide-react';
 import clsx from 'clsx';
 import { post, today } from '../lib/api.js';
-import { DGS_TOPIC_GROUPS } from '../lib/curriculum.js';
+import { useExamCfg } from '../store.js';
+import { validPick, firstTopic } from '../lib/topics.js';
 import { SOUNDS, playSound, stopSound, setVolume, chime } from '../lib/ambient.js';
 import { Item } from './ui.jsx';
 
 const SK = 'dgs_pomo_settings_v1', RK = 'dgs_pomo_run_v1';
-const DEF = { work: 25, short: 5, long: 15, every: 4, auto: true, sound: 'off', volume: 0.3, subjectKey: 'matematik', topicKey: DGS_TOPIC_GROUPS.matematik[0].topics[0].value };
+const DEF = { work: 25, short: 5, long: 15, every: 4, auto: true, sound: 'off', volume: 0.3, subjectKey: 'matematik', topicKey: '' };
 const PHASES = { work: ['Odak', Brain], short: ['Kısa mola', Coffee], long: ['Uzun mola', Coffee] };
 const load = (k, d) => { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } };
 const clock = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
@@ -16,7 +17,8 @@ const clampInt = (v, lo, hi) => Math.min(hi, Math.max(lo, parseInt(v, 10) || lo)
 
 // Süre duvar saatine göre tutulur (endsAt): sekme arka planda olsa da, sayfa yenilense de doğru kalır.
 export default function Pomodoro() {
-  const [cfg, setCfg] = useState(() => load(SK, DEF));
+  const { mode, cfg: exam } = useExamCfg(); const G = exam.curriculum;
+  const [cfg, setCfg] = useState(() => { const c = load(SK, DEF); return { ...c, ...validPick(G, c.subjectKey, c.topicKey) }; });
   const [run, setRun] = useState(() => { const r = load(RK, { phase: 'work', endsAt: null, remaining: null, cycle: 0 }); return { ...r, remaining: r.remaining ?? load(SK, DEF).work * 60000 }; });
   const [now, setNow] = useState(Date.now());
   const [focus, setFocus] = useState(false); const [showCfg, setShowCfg] = useState(false); const [msg, setMsg] = useState('');
@@ -34,10 +36,10 @@ export default function Pomodoro() {
   const record = useCallback(async (minutes) => {
     if (minutes < 1) return;
     try {
-      await post('/sessions', { subjectKey: cfg.subjectKey, topicKey: cfg.topicKey, durationMinutes: Math.min(minutes, 1440), questionsSolved: 0, correctCount: 0, wrongCount: 0, studyDate: today() });
+      await post('/sessions', { examType: mode, subjectKey: cfg.subjectKey, topicKey: cfg.topicKey, durationMinutes: Math.min(minutes, 1440), questionsSolved: 0, correctCount: 0, wrongCount: 0, studyDate: today() });
       setMsg(`${minutes} dk odak oturumu kaydedildi ✓`);
     } catch (e) { setMsg('Oturum kaydedilemedi: ' + e.message); }
-  }, [cfg.subjectKey, cfg.topicKey]);
+  }, [cfg.subjectKey, cfg.topicKey, mode]);
 
   // fazı bitir: kayıt + sonraki faza geç. minutes: kaydedilecek odak dakikası (erken atlamada kısmi)
   const advance = useCallback((minutes, startNext) => {
@@ -82,7 +84,7 @@ export default function Pomodoro() {
 
   const [label, PhaseIcon] = PHASES[run.phase];
   const pct = 1 - left / dur(run.phase);
-  const topics = DGS_TOPIC_GROUPS[cfg.subjectKey];
+  const topics = G[cfg.subjectKey];
   const R = 110, C = 2 * Math.PI * R;
 
   const Ring = ({ size = 280 }) => (
@@ -132,8 +134,8 @@ export default function Pomodoro() {
         <Item className="card space-y-4">
           <div className="stat-label">Kayıt edilecek konu</div>
           <div><label htmlFor="ps">Ders</label>
-            <select id="ps" value={cfg.subjectKey} onChange={e => setCfg(c => ({ ...c, subjectKey: e.target.value, topicKey: DGS_TOPIC_GROUPS[e.target.value][0].topics[0].value }))}>
-              <option value="matematik">Matematik</option><option value="turkce">Türkçe</option></select></div>
+            <select id="ps" value={cfg.subjectKey} onChange={e => setCfg(c => ({ ...c, subjectKey: e.target.value, topicKey: firstTopic(G, e.target.value) }))}>
+              {exam.subjects.map(x => <option key={x.key} value={x.key}>{x.label}</option>)}</select></div>
           <div><label htmlFor="pt">Konu</label>
             <select id="pt" value={cfg.topicKey} onChange={e => setCfg(c => ({ ...c, topicKey: e.target.value }))}>
               {topics.map(g => <optgroup key={g.group} label={g.group}>{g.topics.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</optgroup>)}</select></div>

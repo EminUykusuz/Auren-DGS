@@ -1,32 +1,32 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, BarChart, Bar } from 'recharts';
 import { fmt } from '../lib/api.js';
 import { chartTip } from './ui.jsx';
-import { REASONS } from '../lib/reasons.js';
+import { REASONS, SERIES_COLORS } from '../lib/reasons.js';
 
-// Tüm denemeler: toplam / matematik / Türkçe net (eskiden yeniye)
-export function NetTrend({ exams }) {
-  const data = [...exams].reverse().map(e => ({ date: e.ExamDate.slice(5), name: e.ExamName, Toplam: e.TotalNet, Matematik: Number(e.MathNet), 'Türkçe': Number(e.TurkceNet) }));
+// Seçili bölümdeki denemeler: toplam + bölüm bazlı net (eskiden yeniye). sections: [{ key, label }]
+export function NetTrend({ exams, sections }) {
+  const data = [...exams].reverse().map(e => ({ date: e.ExamDate.slice(5), name: e.ExamName, Toplam: e.TotalNet,
+    ...Object.fromEntries(sections.map(s => [s.label, e.Sections.find(x => x.key === s.key)?.net ?? 0])) }));
   return (
     <div role="img" aria-label={`Deneme net trendi, ${data.length} deneme`}>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={data} margin={{ left: -16, right: 8, top: 8 }}>
           <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} />
           <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-          <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
+          <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} domain={[0, 'auto']} />
           <Tooltip {...chartTip} labelFormatter={(_, p) => p?.[0]?.payload?.name} formatter={v => fmt(v)} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Line dataKey="Toplam" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} isAnimationActive={false} />
-          <Line dataKey="Matematik" stroke="#06B6D4" strokeWidth={1.8} dot={false} strokeDasharray="4 3" isAnimationActive={false} />
-          <Line dataKey="Türkçe" stroke="#818CF8" strokeWidth={1.8} dot={false} strokeDasharray="4 3" isAnimationActive={false} />
+          <Line dataKey="Toplam" stroke="rgb(var(--accent))" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+          {sections.map((s, i) => <Line key={s.key} dataKey={s.label} stroke={SERIES_COLORS[i % SERIES_COLORS.length]} strokeWidth={1.6} dot={false} strokeDasharray="4 3" isAnimationActive={false} />)}
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-// Neden dağılımı: ders bazında yığılmış yatay çubuk
-export function ReasonBars({ rows }) {
-  const data = REASONS.map(r => ({ name: r.label, Matematik: rows.find(x => x.reason === r.key && x.subject === 'matematik')?.total ?? 0, 'Türkçe': rows.find(x => x.reason === r.key && x.subject === 'turkce')?.total ?? 0 }));
+// Neden dağılımı: ders bazında yığılmış yatay çubuk. subjects: [{ key, label }] (satırlarda bulunan dersler)
+export function ReasonBars({ rows, subjects }) {
+  const data = REASONS.map(r => ({ name: r.label, ...Object.fromEntries(subjects.map(s => [s.label, rows.find(x => x.reason === r.key && x.subject === s.key)?.total ?? 0])) }));
   return (
     <div role="img" aria-label="Yanlış nedenlerinin dağılımı">
       <ResponsiveContainer width="100%" height={230}>
@@ -36,8 +36,7 @@ export function ReasonBars({ rows }) {
           <YAxis type="category" dataKey="name" width={104} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
           <Tooltip {...chartTip} cursor={{ fill: 'rgba(255,255,255,.04)' }} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar dataKey="Matematik" stackId="a" fill="#06B6D4" isAnimationActive={false} />
-          <Bar dataKey="Türkçe" stackId="a" fill="#818CF8" radius={[0, 8, 8, 0]} isAnimationActive={false} />
+          {subjects.map((s, i) => <Bar key={s.key} dataKey={s.label} stackId="a" fill={SERIES_COLORS[i % SERIES_COLORS.length]} radius={i === subjects.length - 1 ? [0, 8, 8, 0] : 0} isAnimationActive={false} />)}
         </BarChart>
       </ResponsiveContainer>
     </div>

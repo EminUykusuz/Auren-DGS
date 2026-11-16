@@ -12,7 +12,7 @@ export async function getPool(database = config.db.database) {
   } else {
     sql = (await import('mssql/msnodesqlv8.js')).default;
     p = new sql.ConnectionPool({
-      connectionString: `Driver={ODBC Driver 17 for SQL Server};Server=${server},${port};Database=${database};Trusted_Connection=Yes;TrustServerCertificate=Yes;`,
+      connectionString: `Driver={ODBC Driver 17 for SQL Server};Server=${server}${port ? ',' + port : ''};Database=${database};Trusted_Connection=Yes;TrustServerCertificate=Yes;`,
       pool: { max: 10 },
     });
   }

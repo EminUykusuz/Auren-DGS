@@ -14,7 +14,7 @@ const password = z.string().min(8, 'En az 8 karakter').max(72, 'En fazla 72 kara
 
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 const DUMMY_HASH = bcrypt.hashSync('dummy-password-1', config.bcryptRounds); // zamanlama eşitleme
-const pub = u => ({ id: u.Id, username: u.Username, email: u.Email, isAdmin: !!u.IsAdmin });
+const pub = u => ({ id: u.Id, username: u.Username, email: u.Email, isAdmin: !!u.IsAdmin, examMode: u.ExamMode ?? 'DGS', fullName: u.FullName ?? '', avatarUrl: u.AvatarUrl ?? null });
 
 r.post('/register', authLimiter, validate(z.object({ username, email, password })), wrap(async (req, res) => {
   const { username: u, email: e, password: p } = req.body;
@@ -31,7 +31,7 @@ r.post('/register', authLimiter, validate(z.object({ username, email, password }
 
 r.post('/login', authLimiter, validate(z.object({ identifier: z.string().trim().min(1).max(254), password: z.string().min(1).max(72) })), wrap(async (req, res) => {
   const { identifier, password: p } = req.body;
-  const [u] = await query(`SELECT Id, Username, Email, PasswordHash, IsAdmin, IsDisabled FROM dbo.Users WHERE Email=@i OR Username=@i`, { i: identifier });
+  const [u] = await query(`SELECT Id, Username, Email, PasswordHash, IsAdmin, IsDisabled, ExamMode, FullName, AvatarUrl FROM dbo.Users WHERE Email=@i OR Username=@i`, { i: identifier });
   const ok = await bcrypt.compare(p, u?.PasswordHash ?? DUMMY_HASH);
   if (!u || !ok || u.IsDisabled) return res.status(401).json({ error: 'Kullanıcı adı/e-posta veya şifre hatalı' });
   await query(`UPDATE dbo.Users SET LastLoginAt=SYSUTCDATETIME() WHERE Id=@id`, { id: u.Id });
@@ -42,7 +42,7 @@ r.post('/login', authLimiter, validate(z.object({ identifier: z.string().trim().
 r.post('/logout', (req, res) => { res.clearCookie(config.cookieName, { path: '/', secure: config.cookieSecure, sameSite: config.cookieSameSite }); res.json({ ok: true }); });
 
 r.get('/me', requireAuth, wrap(async (req, res) => {
-  const [u] = await query(`SELECT Id, Username, Email, IsAdmin FROM dbo.Users WHERE Id=@id`, { id: req.userId });
+  const [u] = await query(`SELECT Id, Username, Email, IsAdmin, ExamMode, FullName, AvatarUrl FROM dbo.Users WHERE Id=@id`, { id: req.userId });
   if (!u) return res.status(401).json({ error: 'Oturum geçersiz' });
   res.json({ user: pub(u) });
 }));

@@ -24,6 +24,9 @@
   --glow-a-o: .18; --glow-b-o: .16; --glow-c-o: .08;
   --card-shadow: 0 16px 40px rgba(15,23,42,0.10); --card-hi: rgba(255,255,255,0.9);
 }
+/* YKS modu: indigo vurgu (DGS zümrüt kalır) */
+html[data-exam='YKS'] { --accent: 129 140 248; --glow-a: 99 102 241; }
+html[data-exam='YKS'][data-theme='light'] { --accent: 79 70 229; }
 html[data-glow='off'] .ambient-glow { display: none; }
 
 /* Açık temada renkli metinler için okunabilir tonlar */

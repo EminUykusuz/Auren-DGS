@@ -18,8 +18,8 @@ class Client {
     return { status: res.status, json: await res.json().catch(() => null), headers: res.headers };
   }
 }
-const [A, B, C, C2] = [new Client(), new Client(), new Client(), new Client()];
-const [ua, ub, uc] = [mk('alice'), mk('bob'), mk('carol')];
+const [A, B, C, C2, D, E] = [new Client(), new Client(), new Client(), new Client(), new Client(), new Client()];
+const [ua, ub, uc, ud, ue] = [mk('alice'), mk('bob'), mk('carol'), mk('dora'), mk('emre')];
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 
 test.before(async () => { server = app.listen(0); base = `http://127.0.0.1:${server.address().port}/api`; });
@@ -43,6 +43,8 @@ test('kayıt + cookie HttpOnly + me', async () => {
   assert.equal((await B.call('POST', '/auth/register', ub)).status, 201);
   assert.equal((await C.call('POST', '/auth/register', uc)).status, 201);
   assert.equal((await C2.call('POST', '/auth/register', mk('dave'))).status, 201);
+  assert.equal((await D.call('POST', '/auth/register', ud)).status, 201);
+  assert.equal((await E.call('POST', '/auth/register', ue)).status, 201);
   assert.equal((await new Client().call('POST', '/auth/register', ua)).status, 409);
 });
 
@@ -57,12 +59,13 @@ test('oturumsuz erişim 401', async () => {
   assert.equal((await new Client().call('GET', '/leaderboard')).status, 401);
 });
 
-test('deneme: net sunucuda hesaplanır, istemci net gönderemez, 50 sınırı', async () => {
-  const body = { examName: 'D1', mathCorrect: 30, mathWrong: 4, turkceCorrect: 40, turkceWrong: 2, examDate: '2026-11-01' };
+test('deneme: net sunucuda hesaplanır, istemci net gönderemez, bölüm sınırı', async () => {
+  const body = { examName: 'D1', examDate: '2026-11-01', results: { matematik: { correct: 30, wrong: 4 }, turkce: { correct: 40, wrong: 2 } } };
   const r = await A.call('POST', '/exams', body);
-  assert.equal(r.status, 201); assert.equal(r.json.mathNet, 29); assert.equal(r.json.turkceNet, 39.5); assert.equal(r.json.totalNet, 68.5);
+  assert.equal(r.status, 201); assert.equal(r.json.nets.matematik, 29); assert.equal(r.json.nets.turkce, 39.5); assert.equal(r.json.totalNet, 68.5);
   assert.equal((await A.call('POST', '/exams', { ...body, mathNet: 99 })).status, 400);
-  assert.equal((await A.call('POST', '/exams', { ...body, mathCorrect: 48, mathWrong: 5 })).status, 400);
+  assert.equal((await A.call('POST', '/exams', { ...body, results: { matematik: { correct: 48, wrong: 5 } } })).status, 400);
+  assert.equal((await A.call('POST', '/exams', { ...body, results: { sosyal: { correct: 1, wrong: 0 } } })).status, 400); // DGS'de sosyal yok
   assert.equal((await A.call('GET', '/exams')).json.exams[0].TotalNet, 68.5);
 });
 
@@ -174,7 +177,7 @@ test('profil + geri bildirim: doğrulama, kayıt, satır sonu temizliği, yetki'
 
 
 test('hata nedenleri: kayıt, toplam sınırı, tekil çift, özet, sahiplik', async () => {
-  const body = { examName: 'Hata analizi', mathCorrect: 30, mathWrong: 10, turkceCorrect: 35, turkceWrong: 5, examDate: '2026-11-02',
+  const body = { examName: 'Hata analizi', examDate: '2026-11-02', results: { matematik: { correct: 30, wrong: 10 }, turkce: { correct: 35, wrong: 5 } },
     errors: [{ subject: 'matematik', reason: 'dikkat', count: 4 }, { subject: 'matematik', reason: 'konu', count: 6 }, { subject: 'turkce', reason: 'sure', count: 5 }] };
   const ok = await C2.call('POST', '/exams', body); assert.equal(ok.status, 201);
   assert.equal((await C2.call('POST', '/exams', { ...body, errors: [{ subject: 'turkce', reason: 'sure', count: 6 }] })).status, 400);
@@ -197,4 +200,97 @@ test('profil: sınav tarihi doğrulama', async () => {
   assert.equal((await B.call('GET', '/profile')).json.examDate, '2027-07-18');
   assert.equal((await B.call('PUT', '/profile', { ...base, examDate: null })).status, 200);
   assert.equal((await B.call('GET', '/profile')).json.examDate, null);
+});
+
+
+test('hibrit: YKS denemesi 4 yanlış 1 doğru, bölüm sınırları, mod filtresi', async () => {
+  const tyt = { examType: 'YKS', part: 'TYT', examName: 'TYT-1', examDate: '2026-11-03',
+    results: { turkce: { correct: 30, wrong: 8 }, sosyal: { correct: 15, wrong: 4 }, matematik: { correct: 25, wrong: 12 }, fen: { correct: 10, wrong: 4 } },
+    errors: [{ subject: 'fen', reason: 'konu', count: 4 }] };
+  const ok = await D.call('POST', '/exams', tyt);
+  assert.equal(ok.status, 201);
+  assert.deepEqual(ok.json.nets, { turkce: 28, sosyal: 14, matematik: 22, fen: 9 }); assert.equal(ok.json.totalNet, 73);
+  assert.equal((await D.call('POST', '/exams', { ...tyt, results: { turkce: { correct: 40, wrong: 1 } } })).status, 400);   // TYT Türkçe 40 soru
+  assert.equal((await D.call('POST', '/exams', { ...tyt, part: 'AYT' })).status, 400);                                      // AYT'de sosyal yok
+  assert.equal((await D.call('POST', '/exams', { ...tyt, part: undefined })).status, 400);                                  // YKS'de bölüm şart
+  assert.equal((await D.call('POST', '/exams', { ...tyt, errors: [{ subject: 'fen', reason: 'konu', count: 5 }] })).status, 400);
+  assert.equal((await D.call('POST', '/exams', { ...tyt, examType: 'LGS' })).status, 400);
+  const ayt = await D.call('POST', '/exams', { examType: 'YKS', part: 'AYT', examName: 'AYT-1', examDate: '2026-11-04', results: { matematik: { correct: 20, wrong: 8 }, fizik: { correct: 10, wrong: 4 } } });
+  assert.equal(ayt.status, 201); assert.equal(ayt.json.totalNet, 18 + 9);
+  // DGS ve YKS verisi ayrı
+  assert.equal((await D.call('GET', '/exams?examType=YKS')).json.exams.length, 2);
+  assert.equal((await D.call('GET', '/exams?examType=DGS')).json.exams.length, 0);
+  assert.equal((await D.call('GET', '/exams/error-summary?examType=YKS')).json.categorized, 4);
+  assert.equal((await D.call('GET', '/exams/error-summary?examType=DGS')).json.categorized, 0);
+});
+
+test('hibrit: kalıcı mod tercihi + mod bazlı oturum/müfredat doğrulaması', async () => {
+  assert.equal((await D.call('GET', '/auth/me')).json.user.examMode, 'DGS');
+  assert.equal((await D.call('PUT', '/profile/mode', { examMode: 'LGS' })).status, 400);
+  assert.equal((await D.call('PUT', '/profile/mode', { examMode: 'YKS' })).status, 200);
+  assert.equal((await D.call('GET', '/auth/me')).json.user.examMode, 'YKS');
+  assert.equal((await D.call('GET', '/profile')).json.examMode, 'YKS');
+  assert.equal((await D.call('GET', '/exams')).json.exams.length, 2);        // tür verilmezse kayıtlı mod (YKS)
+  const day = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  const s = { subjectKey: 'fizik', topicKey: 'enerji', durationMinutes: 45, questionsSolved: 30, correctCount: 20, wrongCount: 8, studyDate: day };
+  assert.equal((await D.call('POST', '/sessions', s)).status, 201);                                                          // YKS'de fizik var
+  assert.equal((await D.call('POST', '/sessions', { ...s, examType: 'DGS' })).status, 400);                                  // DGS'de fizik yok
+  assert.equal((await D.call('POST', '/sessions', { ...s, subjectKey: 'matematik', topicKey: 'tek-cift-sayilar' })).status, 400);   // YKS matematiğinde bu (DGS'ye özgü) konu yok
+  assert.equal((await D.call('GET', '/sessions?examType=DGS')).json.sessions.length, 0);
+  assert.equal((await D.call('GET', '/sessions?examType=YKS')).json.sessions.length, 1);
+  assert.equal((await D.call('GET', '/mastery?examType=YKS')).json.topics.length, 1);
+  assert.equal((await D.call('GET', '/mastery?examType=DGS')).json.topics.length, 0);
+  // sınav tarihi moda göre ayrı saklanır
+  assert.equal((await D.call('PUT', '/profile', { targetUniversity: '', targetDepartment: '', examType: 'YKS', examDate: '2027-06-20' })).status, 200);
+  const p = (await D.call('GET', '/profile')).json;
+  assert.equal(p.examDates.YKS, '2027-06-20'); assert.equal(p.examDates.DGS, null); assert.equal(p.examDate, '2027-06-20');
+});
+
+test('hibrit: sıralama ve karşılaştırma seçili sınav türüne göre', async () => {
+  const dId = (await D.call('GET', '/auth/me')).json.user.id;
+  const eId = (await E.call('GET', '/auth/me')).json.user.id;
+  assert.equal((await D.call('POST', '/friends/request', { username: ue.username })).status, 201);
+  const inc = (await E.call('GET', '/friends')).json.incoming;
+  assert.equal(inc[0].mode, 'YKS');
+  assert.equal((await E.call('POST', `/friends/${inc[0].friendshipId}/accept`)).status, 200);
+  await E.call('POST', '/exams', { examType: 'DGS', examName: 'DGS-E', examDate: '2026-11-05', results: { matematik: { correct: 40, wrong: 0 }, turkce: { correct: 40, wrong: 0 } } });
+  const yks = (await D.call('GET', '/leaderboard?examType=YKS&part=TYT')).json;
+  assert.equal(yks.examType, 'YKS'); assert.equal(yks.part, 'TYT');
+  assert.equal(yks.rows.find(x => x.userId === dId).bestNet, 73); assert.equal(yks.rows.find(x => x.userId === eId).bestNet, 0);
+  const dgs = (await D.call('GET', '/leaderboard?examType=DGS')).json;
+  assert.equal(dgs.rows.find(x => x.userId === eId).bestNet, 80); assert.equal(dgs.rows.find(x => x.userId === dId).bestNet, 0);
+  assert.equal(dgs.rows[0].userId, eId);                                                  // DGS'de E önde
+  assert.equal((await D.call('GET', '/leaderboard?examType=YKS&part=DGS')).status, 400);  // bölüm sınav türüne ait olmalı
+  const cmp = (await D.call('GET', `/compare/${eId}?examType=YKS&part=AYT`)).json;
+  assert.equal(cmp.me.bestNet, 27);
+  assert.deepEqual(cmp.me.sections.map(s => s.key), ['matematik', 'fizik', 'kimya', 'biyoloji', 'edebiyat', 'tarih', 'cografya']);
+  assert.equal(cmp.me.sections[0].avg, 18);
+  assert.equal((await D.call('GET', `/compare/${eId}?examType=XXX`)).status, 400);
+});
+
+test('hibrit: destek modülü açıklama kodu kullanıcıya özel ve kararlı', async () => {
+  const a = (await D.call('GET', '/support')).json, a2 = (await D.call('GET', '/support')).json, b = (await E.call('GET', '/support')).json;
+  assert.match(a.code, /^AUR-[0-9A-Z]+-[0-9A-F]{4}$/); assert.equal(a.code, a2.code); assert.notEqual(a.code, b.code);
+  assert.equal(typeof a.configured, 'boolean');
+  assert.equal((await new Client().call('GET', '/support')).status, 401);
+  assert.equal((await new Client().call('GET', '/exams-config')).status, 200);
+});
+
+test('profil kimliği: ad soyad, avatar allowlist, e-posta değişimi şifre ister', async () => {
+  const av = 'https://api.dicebear.com/9.x/lorelei/svg?seed=Mila';
+  const base = { fullName: 'Ayşe Yılmaz', avatarUrl: av, email: ud.email };
+  assert.equal((await D.call('PUT', '/profile/account', base)).status, 200);
+  const p = (await D.call('GET', '/profile')).json; assert.equal(p.fullName, 'Ayşe Yılmaz'); assert.equal(p.avatarUrl, av);
+  assert.equal((await D.call('GET', '/auth/me')).json.user.avatarUrl, av);
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, avatarUrl: 'https://evil.example/x.svg' })).status, 400);   // keyfi URL yok
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, fullName: '<script>' })).status, 400);
+  const nm = `yeni.${suffix}@test.local`;
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, email: nm })).status, 403);                                // şifresiz olmaz
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, email: nm, currentPassword: 'yanlis123' })).status, 403);
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, email: ue.email, currentPassword: ud.password })).status, 409); // başkasının e-postası
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, email: nm, currentPassword: ud.password })).status, 200);
+  assert.equal((await D.call('GET', '/profile')).json.email, nm);
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, avatarUrl: null, isAdmin: true })).status, 400);           // fazladan alan
+  assert.equal((await D.call('PUT', '/profile/account', { ...base, email: nm, avatarUrl: null })).status, 200);
+  assert.equal((await D.call('GET', '/auth/me')).json.user.avatarUrl, null);
 });

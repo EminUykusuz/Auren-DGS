@@ -27,10 +27,12 @@ export const config = {
     user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '',
     from: process.env.SMTP_FROM || process.env.SMTP_USER || '', to: process.env.FEEDBACK_TO || '',
   },
+  // Bağış modülü: IBAN boşsa arayüzde "yakında" gösterilir (sahte IBAN asla üretilmez)
+  support: { iban: (process.env.SUPPORT_IBAN || '').replace(/\s+/g, '').toUpperCase(), holder: process.env.SUPPORT_HOLDER || '', bank: process.env.SUPPORT_BANK || '' },
   db: {
     database: process.env.DB_NAME || 'DgsTouch',
     server: process.env.DB_SERVER || 'localhost',
-    port: Number(process.env.DB_PORT) || 1433,
+    port: process.env.DB_PORT === '0' ? 0 : Number(process.env.DB_PORT) || 1433, // 0 → port yazılmaz (adlandırılmış örnek / paylaşımlı bellek)
     // Windows Authentication: DB_TRUSTED_CONNECTION=true veya DB_USER boşsa
     trusted: process.env.DB_TRUSTED_CONNECTION === 'true' || !process.env.DB_USER,
     user: process.env.DB_USER || '',

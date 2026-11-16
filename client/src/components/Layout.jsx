@@ -2,7 +2,9 @@ import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Clock, Timer as TimerIcon, ClipboardCheck, BookOpen, Users, Swords, LogOut, ShieldCheck, Settings, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import clsx from 'clsx';
-import { useAuth } from '../store.js';
+import { useAuth, useExam } from '../store.js';
+import ModeSwitch from './ModeSwitch.jsx';
+import Avatar from './Avatar.jsx';
 import { useTheme, bgCss } from '../theme.js';
 import { get } from '../lib/api.js';
 import { usePoll } from '../lib/poll.js';
@@ -57,13 +59,15 @@ function Item({ to, label, Icon, collapsed, badge }) {
 }
 
 export function Shell() {
-  const { user, logout } = useAuth(); const { theme, toggleMode } = useTheme(); const loc = useLocation();
+  const { user, logout } = useAuth(); const { theme, toggleMode } = useTheme(); const loc = useLocation(); const mode = useExam(s => s.mode);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('dgs_nav') !== 'open');   // varsayılan: simge dock'u
   const toggle = () => setCollapsed(c => { localStorage.setItem('dgs_nav', c ? 'open' : 'closed'); return !c; });
   const [pending, setPending] = useState(0);
   usePoll(() => get('/friends').then(r => setPending(r.incoming.length)).catch(() => {}), 30000);
   const seg = loc.pathname.split('/')[1] ?? '';
-  useEffect(() => { document.title = `${titles[seg] ?? 'Auren DGS'} · Auren DGS`; }, [seg]);
+  useEffect(() => { document.title = `${titles[seg] ?? 'Auren ' + mode} · Auren ${mode}`; }, [seg, mode]);
+  useEffect(() => { document.documentElement.dataset.exam = mode; }, [mode]);   // moda göre vurgu rengi (index.css)
+  if (!user) return null;   // çıkış anında bu bileşen, App kaldırmadan önce bir kez daha çizilebilir
   const items = [...nav.map(([to, l, I]) => ({ to, l, I, badge: to === '/arkadaslar' ? pending : 0 })), ...(user.isAdmin ? [{ to: '/admin', l: 'Yönetim', I: ShieldCheck }] : [])];
   const light = theme === 'light';
 
@@ -73,8 +77,8 @@ export function Shell() {
       <aside className={clsx('card-fixed fixed left-4 top-4 z-30 hidden transition-[width] duration-300 md:block', collapsed ? 'w-[72px]' : 'w-56')}>
         <div className="card !rounded-[32px] !p-3">
           <div className={clsx('flex items-center pb-3 pt-2', collapsed ? 'flex-col gap-2' : 'justify-between px-3')}>
-            {collapsed ? <div className="text-lg font-bold text-accent" aria-label="Auren DGS">A</div>
-              : <div className="min-w-0"><div className="text-lg font-bold tracking-tight text-white">Auren <span className="text-accent">DGS</span></div><div className="truncate text-xs text-slate-500">@{user.username}</div></div>}
+            {collapsed ? <NavLink to="/ayarlar" aria-label="Profil"><Avatar name={user.username} url={user.avatarUrl} size={36} /></NavLink>
+              : <div className="min-w-0"><div className="text-lg font-bold tracking-tight text-white">Auren <span className="text-accent">{mode}</span></div><NavLink to="/ayarlar" className="mt-1 flex items-center gap-2 truncate text-xs text-slate-400 hover:text-slate-200"><Avatar name={user.username} url={user.avatarUrl} size={20} /><span className="truncate">{user.fullName || '@' + user.username}</span></NavLink></div>}
             <button onClick={toggle} aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'} aria-expanded={!collapsed} className="rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-slate-200">
               {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
           </div>
@@ -102,7 +106,11 @@ export function Shell() {
       </nav>
 
       <main className={clsx('mx-auto max-w-[1680px] px-4 pb-28 pt-6 transition-[padding] duration-300 md:pb-10 md:pr-6', collapsed ? 'md:pl-[6.5rem]' : 'md:pl-[15.5rem]')}>
-        <div key={seg} className="fade-in"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>
+        <div className="sticky top-3 z-20 -mt-1 mb-4 flex items-center justify-between gap-3">
+          <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">Auren <span className="text-accent">{mode}</span></span><span aria-hidden="true">·</span><span>{mode === 'DGS' ? 'Dikey Geçiş Sınavı' : 'TYT · AYT'}</span></div>
+          <ModeSwitch className="ml-auto" />
+        </div>
+        <div key={seg + mode} className="fade-in"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>
         <Credit />
       </main>
     </div>

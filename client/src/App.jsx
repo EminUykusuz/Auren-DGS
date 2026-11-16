@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './store.js';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useAuth, useExam } from './store.js';
 import { Shell, Ambient } from './components/Layout.jsx';
 import { Login, Register, Forgot, Reset } from './pages/AuthPages.jsx';
 
@@ -16,11 +16,13 @@ const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Admin = lazy(() => import('./pages/Admin.jsx'));
 
 export default function App() {
-  const { user, ready, init } = useAuth();
+  const loc = useLocation();
+  const { user, ready, init } = useAuth(); const config = useExam(s => s.config);
   useEffect(() => { init(); }, [init]);
   if (!ready) return <div className="p-10 text-center text-slate-500" role="status">Yükleniyor…</div>;
+  if (user && !config) return <div className="p-10 text-center text-sm text-red-300" role="alert">Sunucuya ulaşılamadı. <button className="underline" onClick={() => init()}>Tekrar dene</button></div>;
   if (!user) return (
-    <><Ambient />
+    <>{loc.pathname !== '/' && <Ambient />}
       <Routes>
         <Route path="/" element={<Suspense fallback={null}><Landing /></Suspense>} />
         <Route path="/giris" element={<Login />} />

@@ -9,21 +9,21 @@ r.use(requireAuth);
 // Kullanıcı adına göre arama (yalnızca id + username döner, e-posta asla)
 r.get('/search', validate(z.object({ q: z.string().trim().min(2).max(30).regex(/^[\p{L}\p{N}_.-]+$/u) }), 'query'), wrap(async (req, res) => {
   const rows = await query(
-    `SELECT TOP 10 u.Id, u.Username,
+    `SELECT TOP 10 u.Id, u.Username, u.AvatarUrl,
        (SELECT TOP 1 f.Status FROM dbo.Friendships f WHERE f.PairLow = CASE WHEN u.Id<@me THEN u.Id ELSE @me END
           AND f.PairHigh = CASE WHEN u.Id<@me THEN @me ELSE u.Id END) AS Relation
      FROM dbo.Users u WHERE u.Id<>@me AND u.Username LIKE @like ESCAPE '\\' ORDER BY u.Username`,
     { me: req.userId, like: req.query.q.replace(/[%_\\[]/g, '\\$&') + '%' });
-  res.json({ users: rows.map(x => ({ id: x.Id, username: x.Username, relation: x.Relation ?? null })) });
+  res.json({ users: rows.map(x => ({ id: x.Id, username: x.Username, avatarUrl: x.AvatarUrl, relation: x.Relation ?? null })) });
 }));
 
 r.get('/', wrap(async (req, res) => {
   const rows = await query(
-    `SELECT f.Id, f.Status, f.RequesterId, u.Id AS OtherId, u.Username
+    `SELECT f.Id, f.Status, f.RequesterId, u.Id AS OtherId, u.Username, u.ExamMode, u.AvatarUrl
      FROM dbo.Friendships f
      JOIN dbo.Users u ON u.Id = CASE WHEN f.RequesterId=@me THEN f.AddresseeId ELSE f.RequesterId END
      WHERE f.RequesterId=@me OR f.AddresseeId=@me ORDER BY u.Username`, { me: req.userId });
-  const map = x => ({ friendshipId: x.Id, userId: x.OtherId, username: x.Username });
+  const map = x => ({ friendshipId: x.Id, userId: x.OtherId, username: x.Username, mode: x.ExamMode, avatarUrl: x.AvatarUrl });
   res.json({
     friends: rows.filter(x => x.Status === 'accepted').map(map),
     incoming: rows.filter(x => x.Status === 'pending' && x.RequesterId !== req.userId).map(map),

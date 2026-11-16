@@ -7,7 +7,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from './config.js';
-import { DGS_TOPIC_GROUPS } from './curriculum.js';
+import { publicConfig } from './exams.js';
 import { apiLimiter, originGuard, errorHandler } from './security.js';
 import auth from './routes/auth.js';
 import friends from './routes/friends.js';
@@ -20,7 +20,8 @@ export const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(compression());
-app.use(helmet());
+// Avatarlar api.dicebear.com'dan SVG olarak yüklenir; diğer varsayılanlar korunur
+app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), 'img-src': ["'self'", 'data:', 'https://api.dicebear.com'] } } }));
 app.use(cors({
   origin: (o, cb) => (!o || config.origins.includes(o)) ? cb(null, true) : cb(new Error('CORS')),
   credentials: true,
@@ -32,7 +33,9 @@ app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next
 app.use('/api', apiLimiter, originGuard);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-app.get('/api/curriculum', (req, res) => res.json(DGS_TOPIC_GROUPS));
+// Sınav türleri, bölümler, soru sayıları ve müfredat (herkese açık, kişisel veri yok)
+const examConfig = publicConfig();
+app.get('/api/exams-config', (req, res) => res.json(examConfig));
 app.use('/api/auth', auth);
 app.use('/api/friends', friends);
 app.use('/api', study);

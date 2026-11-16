@@ -21,7 +21,7 @@ r.get('/metrics', wrap(async (req, res) => {
     (SELECT COUNT(*) FROM dbo.StudySessions) AS Sessions,
     (SELECT COALESCE(SUM(DurationMinutes),0) FROM dbo.StudySessions) AS Minutes,
     (SELECT COUNT(*) FROM dbo.TrialExams) AS Exams,
-    (SELECT COALESCE(AVG(CAST(MathNet + TurkceNet AS float)),0) FROM dbo.TrialExams) AS AvgNet,
+    (SELECT COALESCE(AVG(CAST(TotalNet AS float)),0) FROM dbo.TrialExams) AS AvgNet,
     (SELECT COUNT(*) FROM dbo.PasswordResets WHERE IsUsed=0 AND ExpiresAt > SYSUTCDATETIME()) AS OpenResets`);
   const daily = await query(`SELECT CONVERT(char(10), d.Day, 23) AS Day,
       (SELECT COUNT(*) FROM dbo.StudySessions s WHERE s.StudyDate = d.Day) AS Sessions,
@@ -94,7 +94,7 @@ r.get('/activity', wrap(async (req, res) => {
   const rows = await query(`SELECT TOP 40 * FROM (
       SELECT 'signup' AS Kind, u.Username, NULL AS Detail, u.CreatedAt AS At FROM dbo.Users u
       UNION ALL SELECT 'login', u.Username, NULL, u.LastLoginAt FROM dbo.Users u WHERE u.LastLoginAt IS NOT NULL
-      UNION ALL SELECT 'exam', u.Username, e.ExamName + ' · ' + CAST(e.MathNet + e.TurkceNet AS varchar(10)) + ' net', DATEADD(second, e.Id % 60, CAST(e.ExamDate AS datetime2)) FROM dbo.TrialExams e JOIN dbo.Users u ON u.Id=e.UserId
+      UNION ALL SELECT 'exam', u.Username, e.ExamName + ' · ' + e.ExamPart + ' · ' + CAST(e.TotalNet AS varchar(10)) + ' net', DATEADD(second, e.Id % 60, CAST(e.ExamDate AS datetime2)) FROM dbo.TrialExams e JOIN dbo.Users u ON u.Id=e.UserId
       UNION ALL SELECT 'session', u.Username, s.TopicKey + ' · ' + CAST(s.DurationMinutes AS varchar(10)) + ' dk', DATEADD(second, s.Id % 60, CAST(s.StudyDate AS datetime2)) FROM dbo.StudySessions s JOIN dbo.Users u ON u.Id=s.UserId
       UNION ALL SELECT 'friend', u.Username, 'arkadaşlık ' + f.Status, f.CreatedAt FROM dbo.Friendships f JOIN dbo.Users u ON u.Id=f.RequesterId
     ) a ORDER BY At DESC`);

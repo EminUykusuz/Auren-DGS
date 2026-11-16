@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { ZodError } from 'zod';
 import { config } from './config.js';
 import { query } from './db.js';
+import { isExamType } from './exams.js';
 
 export const authLimiter = rateLimit({ windowMs: 15 * 60_000, limit: Number(process.env.AUTH_RATE_LIMIT) || 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Çok fazla deneme. Lütfen daha sonra tekrar deneyin.' } });
 export const apiLimiter = rateLimit({ windowMs: 60_000, limit: 200, standardHeaders: true, legacyHeaders: false });
@@ -18,9 +19,9 @@ export async function requireAuth(req, res, next) {
     if (!token) return res.status(401).json({ error: 'Oturum gerekli' });
     const { sub } = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
     // Yetki her istekte veritabanından okunur: askıya alınan / yetkisi alınan kullanıcı anında etkilenir
-    const [u] = await query(`SELECT Id, IsAdmin, IsDisabled FROM dbo.Users WHERE Id=@id`, { id: sub });
+    const [u] = await query(`SELECT Id, IsAdmin, IsDisabled, ExamMode FROM dbo.Users WHERE Id=@id`, { id: sub });
     if (!u || u.IsDisabled) return res.status(401).json({ error: 'Oturum geçersiz' });
-    req.userId = u.Id; req.isAdmin = !!u.IsAdmin;
+    req.userId = u.Id; req.isAdmin = !!u.IsAdmin; req.examMode = u.ExamMode;
     next();
   } catch { res.status(401).json({ error: 'Oturum geçersiz' }); }
 }
@@ -69,4 +70,13 @@ export function errorHandler(err, req, res, _next) {
   if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Geçersiz JSON' });
   console.error(err);
   res.status(500).json({ error: 'Sunucu hatası' });
+}
+
+// Sınav türü: ?examType= (GET/DELETE) veya gövdedeki examType; yoksa kullanıcının kayıtlı modu.
+// Geçersiz değer sessizce yok sayılmaz, 400 döner.
+export function resolveExam(req, res, next) {
+  const raw = req.query?.examType ?? req.body?.examType;
+  if (raw !== undefined && !isExamType(raw)) return res.status(400).json({ error: 'Geçersiz sınav türü' });
+  req.examType = raw ?? req.examMode ?? 'DGS';
+  next();
 }

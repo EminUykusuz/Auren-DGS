@@ -6,6 +6,8 @@ import { Crown } from 'lucide-react';
 import { get, fmt } from '../lib/api.js';
 import { usePoll } from '../lib/poll.js';
 import { Page, Item, Title, chartTip } from '../components/ui.jsx';
+import { useExam, useExamCfg } from '../store.js';
+import clsx from 'clsx';
 
 const POLL_MS = 15000; // canlı: 15 sn'de bir yenilenir
 
@@ -30,8 +32,9 @@ function Row({ label, a, b, unit = '', format = fmt }) {
 
 // Her ekseni iki kullanıcının en büyüğüne göre 0-100 ölçekler
 function radarData(me, fr) {
-  const m = [['Saat', 'weeklyHours'], ['Soru', 'weeklyQuestions'], ['Ort. net', 'avgNet'], ['Mat. net', 'mathAvg'], ['Türk. net', 'turkceAvg'], ['İlerleme', 'overallPercent']];
-  return m.map(([name, k]) => { const mx = Math.max(me[k], fr[k], 0.0001); return { name, me: Math.round(Math.max(me[k], 0) / mx * 100), fr: Math.round(Math.max(fr[k], 0) / mx * 100) }; });
+  const scale = (name, a, b) => { const mx = Math.max(a, b, 0.0001); return { name, me: Math.round(Math.max(a, 0) / mx * 100), fr: Math.round(Math.max(b, 0) / mx * 100) }; };
+  return [scale('Saat', me.weeklyHours, fr.weeklyHours), scale('Soru', me.weeklyQuestions, fr.weeklyQuestions), scale('Ort. net', me.avgNet, fr.avgNet),
+    ...me.sections.map((s, i) => scale(s.label.split(' ')[0], s.avg, fr.sections[i].avg)), scale('İlerleme', me.overallPercent, fr.overallPercent)];
 }
 function trendData(me, fr) {
   const n = Math.max(me.trend.length, fr.trend.length);
@@ -40,15 +43,21 @@ function trendData(me, fr) {
 
 export default function Battle() {
   const { friendId } = useParams(); const nav = useNavigate();
+  const { cfg, part, partDef, q } = useExamCfg(); const setPart = useExam(x => x.setPart); const multi = cfg.parts.length > 1;
   const [friends, setFriends] = useState(null); const [data, setData] = useState(null); const [err, setErr] = useState('');
   useEffect(() => { get('/friends').then(r => setFriends(r.friends)); }, []);
   useEffect(() => { setData(null); setErr(''); }, [friendId]);
-  usePoll(() => { if (friendId) get('/compare/' + friendId).then(d => (setData(d), setErr(''))).catch(e => setErr(e.message)); }, POLL_MS, [friendId]);
+  usePoll(() => { if (friendId) get('/compare/' + friendId + q({ part })).then(d => (setData(d), setErr(''))).catch(e => setErr(e.message)); }, POLL_MS, [friendId, part]);
 
   return (
     <Page>
       <Title right={<select className="!w-56" aria-label="Arkadaş seç" value={friendId ?? ''} onChange={e => e.target.value && nav('/karsilastir/' + e.target.value)}>
-        <option value="">Arkadaş seç…</option>{friends?.map(f => <option key={f.userId} value={f.userId}>@{f.username}</option>)}</select>}>Yüz yüze</Title>
+        <option value="">Arkadaş seç…</option>{friends?.map(f => <option key={f.userId} value={f.userId}>@{f.username}</option>)}</select>}>Yüz yüze · {cfg.id}</Title>
+      {multi && (
+        <div role="tablist" aria-label="Deneme bölümü" className="inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+          {cfg.parts.map(p => <button key={p.id} role="tab" aria-selected={part === p.id} onClick={() => setPart(p.id)}
+            className={clsx('rounded-full px-4 py-1.5 text-xs font-bold transition', part === p.id ? 'bg-accent text-onaccent' : 'text-slate-400 hover:text-slate-200')}>{p.label} netleri</button>)}
+        </div>)}
       {friends && !friends.length && <Item className="card text-sm text-slate-400">Karşılaştırma için önce arkadaş eklemelisin. <Link to="/arkadaslar" className="text-cyan2">Arkadaşlar</Link></Item>}
       {err && <div role="alert" className="card text-sm text-red-300">{err}</div>}
       {data && (() => { const { me, friend: fr } = data; return (<>
@@ -59,13 +68,12 @@ export default function Battle() {
           </div>
           <Row label="Haftalık çalışma (saat)" a={me.weeklyHours} b={fr.weeklyHours} />
           <Row label="Haftalık soru" a={me.weeklyQuestions} b={fr.weeklyQuestions} format={v => v} />
-          <Row label="Ortalama toplam net" a={me.avgNet} b={fr.avgNet} />
-          <Row label="Matematik ort. net" a={me.mathAvg} b={fr.mathAvg} />
-          <Row label="Türkçe ort. net" a={me.turkceAvg} b={fr.turkceAvg} />
+          <Row label="Haftalık puan" a={me.weeklyPoints} b={fr.weeklyPoints} format={v => v} />
+          <Row label={`Ortalama toplam net${multi ? ' · ' + partDef.label : ''}`} a={me.avgNet} b={fr.avgNet} />
+          {me.sections.map((sec, i) => <Row key={sec.key} label={`${sec.label} ort. net`} a={sec.avg} b={fr.sections[i].avg} />)}
           <Row label="En iyi net" a={me.bestNet} b={fr.bestNet} />
-          <Row label="Matematik konuları" a={me.subjects.matematik.percent} b={fr.subjects.matematik.percent} unit="%" format={v => v} />
-          <Row label="Türkçe konuları" a={me.subjects.turkce.percent} b={fr.subjects.turkce.percent} unit="%" format={v => v} />
-          <p className="mt-3 text-center text-xs text-slate-500">Hafta başı {data.weekStart} · canlı, 15 sn'de bir yenilenir</p>
+          {cfg.subjects.map(sub => <Row key={sub.key} label={`${sub.label} konuları`} a={me.subjects[sub.key].percent} b={fr.subjects[sub.key].percent} unit="%" format={v => v} />)}
+          <p className="mt-3 text-center text-xs text-slate-500">Hafta başı {data.weekStart} · puan = 10/saat + soru/10 + 2×ort. net · canlı, 15 sn'de bir yenilenir</p>
         </Item>
         <div className="grid gap-4 lg:grid-cols-2">
           <Item className="card"><div className="stat-label mb-2">Güç dağılımı (göreli)</div>
@@ -78,7 +86,7 @@ export default function Battle() {
           <Item className="card"><div className="stat-label mb-2">Son denemelerde toplam net</div>
             <ResponsiveContainer width="100%" height={260}><LineChart data={trendData(me, fr)}>
               <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} /><XAxis dataKey="n" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="#64748b" fontSize={11} domain={[0, 100]} tickLine={false} axisLine={false} /><Tooltip {...chartTip} formatter={v => fmt(v)} />
+              <YAxis stroke="#64748b" fontSize={11} domain={[0, 'auto']} tickLine={false} axisLine={false} /><Tooltip {...chartTip} formatter={v => fmt(v)} />
               <Line name={'@' + me.username} dataKey="me" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
               <Line name={'@' + fr.username} dataKey="fr" stroke="#06B6D4" strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
               <Legend wrapperStyle={{ fontSize: 12 }} />

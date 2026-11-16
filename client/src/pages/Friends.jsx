@@ -1,12 +1,52 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, X, UserPlus, Swords, Search } from 'lucide-react';
+import { Check, X, UserPlus, Swords, Search, Trophy } from 'lucide-react';
+import clsx from 'clsx';
 import { get, post, del } from '../lib/api.js';
 import { usePoll } from '../lib/poll.js';
+import { useExam, useExamCfg } from '../store.js';
+import { fmt } from '../lib/api.js';
+import Avatar from '../components/Avatar.jsx';
+import { Bar } from '../components/ui.jsx';
 
 const VALID = /^[\p{L}\p{N}_.-]+$/u;
-const Avatar = ({ name }) => <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold uppercase text-accent">{name.slice(0, 1)}</span>;
-const Who = ({ name }) => <span className="flex min-w-0 items-center gap-3"><Avatar name={name} /><span className="truncate">@{name}</span></span>;
+const Who = ({ name, url }) => <span className="flex min-w-0 items-center gap-3"><Avatar name={name} url={url} /><span className="truncate">@{name}</span></span>;
+
+const MEDAL = ['text-amber-300', 'text-slate-300', 'text-orange-400'];
+
+// Seçili sınav modundaki haftalık puan ve netlere göre arkadaş sıralaması
+function Rivalry() {
+  const { cfg, part, partDef, q } = useExamCfg(); const setPart = useExam(x => x.setPart); const multi = cfg.parts.length > 1;
+  const [lb, setLb] = useState(null);
+  usePoll(() => { get('/leaderboard' + q({ part })).then(setLb).catch(() => {}); }, 15000, [part]);
+  if (!lb || lb.examType !== cfg.id) return null;
+  if (lb.rows.length < 2) return <div className="card"><div className="stat-label mb-2 flex items-center gap-2"><Trophy size={13} /> {cfg.id} sıralaması</div><p className="py-4 text-center text-sm text-slate-500">Rekabet için arkadaş ekle; haftalık puan ve netlerinle sıralanırsınız.</p></div>;
+  const max = Math.max(...lb.rows.map(r => r.weeklyPoints), 1);
+  return (
+    <div className="card">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="stat-label flex items-center gap-2"><Trophy size={13} className="text-amber-300" /> Haftalık sıralama · {cfg.id}</div>
+        {multi && <div role="tablist" aria-label="Deneme bölümü" className="inline-flex rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+          {cfg.parts.map(p => <button key={p.id} role="tab" aria-selected={part === p.id} onClick={() => setPart(p.id)}
+            className={clsx('rounded-full px-3 py-1 text-xs font-bold transition', part === p.id ? 'bg-accent text-onaccent' : 'text-slate-400 hover:text-slate-200')}>{p.label}</button>)}</div>}
+      </div>
+      <ol className="space-y-2">
+        {lb.rows.map(r => (
+          <li key={r.userId} className={clsx('rounded-2xl border px-3 py-2.5', r.isMe ? 'border-accent/30 bg-accent/[0.06]' : 'border-white/[0.06] bg-white/[0.02]', !r.hasData && 'opacity-60')}>
+            <div className="flex items-center gap-3 text-sm">
+              <span className={clsx('num w-6 text-center text-base font-bold', MEDAL[r.rank - 1] ?? 'text-slate-500')}>{r.rank}</span>
+              <Avatar name={r.username} url={r.avatarUrl} size={28} /><span className="min-w-0 flex-1 truncate"><span className={r.isMe ? 'font-semibold text-accent' : 'text-slate-100'}>@{r.username}</span>{r.isMe && <span className="text-slate-500"> (sen)</span>}
+                {r.mode !== cfg.id && <span className="badge ml-2 bg-white/[0.07] text-slate-400" title="Kullanıcının asıl modu">{r.mode}</span>}</span>
+              <span className="num text-right text-xs text-slate-400"><span className="text-base font-semibold text-slate-50">{fmt(r.weeklyPoints)}</span> puan</span>
+            </div>
+            <div className="mt-2 pl-9"><Bar percent={r.weeklyPoints / max * 100} label={`@${r.username} haftalık puan`} color={r.isMe ? 'bg-accent' : 'bg-cyan2'} /></div>
+            <div className="num mt-1.5 pl-9 text-xs text-slate-500">{r.hasData ? <>ort. net {fmt(r.avgNet)}{multi && ` (${partDef.label})`} · en iyi {fmt(r.bestNet)} · {fmt(r.weeklyHours)} sa · {r.weeklyQuestions} soru</> : `${cfg.id} modunda henüz veri yok`}</div>
+          </li>))}
+      </ol>
+      <p className="mt-3 text-xs text-slate-500">Puan = 10 × haftalık saat + soru ÷ 10 + 2 × ort. net. Sıralama yalnızca seçili modun ({cfg.id}) verisinden hesaplanır.</p>
+    </div>
+  );
+}
 
 export default function Friends() {
   const [d, setD] = useState({ friends: [], incoming: [], outgoing: [] });
@@ -56,7 +96,7 @@ export default function Friends() {
         </div>
         {res && res.length > 0 && <ul className="mt-3 divide-y divide-white/[0.06]">{res.map(u => (
           <li key={u.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <Who name={u.username} />
+            <Who name={u.username} url={u.avatarUrl} />
             {u.relation === 'accepted' ? <span className="text-xs text-slate-500">Arkadaşsınız</span>
               : u.relation === 'pending' ? <span className="text-xs text-slate-500">İstek beklemede</span>
               : <button type="button" className="btn-ghost" disabled={busy} onClick={() => add(u.username)}><UserPlus size={14} /> İstek gönder</button>}
@@ -67,20 +107,21 @@ export default function Friends() {
 
       {d.incoming.length > 0 && (
         <div className="card"><div className="stat-label mb-2">Gelen istekler ({d.incoming.length})</div><ul className="divide-y divide-white/[0.06]">{d.incoming.map(u => (
-          <li key={u.friendshipId} className="flex items-center justify-between gap-3 py-2 text-sm"><Who name={u.username} />
+          <li key={u.friendshipId} className="flex items-center justify-between gap-3 py-2 text-sm"><Who name={u.username} url={u.avatarUrl} />
             <span className="flex gap-2">
               <button className="btn" disabled={busy} onClick={() => act(() => post(`/friends/${u.friendshipId}/accept`), `@${u.username} arkadaş listene eklendi`)}><Check size={14} /> Kabul Et</button>
               <button className="btn-ghost" disabled={busy} onClick={() => act(() => post(`/friends/${u.friendshipId}/reject`))}><X size={14} /> Reddet</button></span></li>))}</ul></div>)}
+      <Rivalry />
       <div className="card"><div className="stat-label mb-2">Arkadaşlarım ({d.friends.length})</div>
         <ul className="divide-y divide-white/[0.06]">{d.friends.map(u => (
-          <li key={u.friendshipId} className="flex items-center justify-between gap-3 py-2 text-sm"><Who name={u.username} />
+          <li key={u.friendshipId} className="flex items-center justify-between gap-3 py-2 text-sm"><span className="flex min-w-0 items-center gap-2"><Who name={u.username} url={u.avatarUrl} /><span className="badge bg-white/[0.07] text-slate-400">{u.mode}</span></span>
             <span className="flex gap-2">
               <Link className="btn" to={`/karsilastir/${u.userId}`}><Swords size={14} /> Karşılaştır</Link>
               <button className="btn-ghost" onClick={() => confirm(`@${u.username} arkadaşlıktan çıkarılsın mı?`) && act(() => del('/friends/' + u.friendshipId))}>Çıkar</button></span></li>))}
           {!d.friends.length && <li className="py-6 text-center text-sm text-slate-500">Henüz arkadaşın yok. Yukarıdan kullanıcı adıyla ara.</li>}</ul></div>
       {d.outgoing.length > 0 && (
         <div className="card"><div className="stat-label mb-2">Gönderilen istekler</div><ul className="divide-y divide-white/[0.06]">{d.outgoing.map(u => (
-          <li key={u.friendshipId} className="flex items-center justify-between gap-3 py-2 text-sm"><Who name={u.username} />
+          <li key={u.friendshipId} className="flex items-center justify-between gap-3 py-2 text-sm"><Who name={u.username} url={u.avatarUrl} />
             <button className="btn-ghost" disabled={busy} onClick={() => act(() => del('/friends/' + u.friendshipId))}>Geri çek</button></li>))}</ul></div>)}
     </div>
   );

@@ -1,9 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2 } from 'lucide-react';
+import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2, UserRound } from 'lucide-react';
 import clsx from 'clsx';
 import { get, put, post } from '../lib/api.js';
 import { useTheme, THEMES, BACKGROUNDS, fileToBg } from '../theme.js';
 import { Page, Item, Title } from '../components/ui.jsx';
+import { useExam, useAuth } from '../store.js';
+import Avatar, { AVATARS } from '../components/Avatar.jsx';
+import SupportCard from '../components/SupportCard.jsx';
 
 function Switch({ checked, onChange, label, hint }) {
   const id = useId();
@@ -71,12 +74,57 @@ function Appearance() {
   );
 }
 
-function Target() {
-  const [f, setF] = useState({ targetUniversity: '', targetDepartment: '', examDate: '' }); const [state, setState] = useState('idle'); const [err, setErr] = useState('');
-  useEffect(() => { get('/profile').then(p => setF({ targetUniversity: p.targetUniversity, targetDepartment: p.targetDepartment, examDate: p.examDate ?? '' })).catch(() => {}); }, []);
+function Profile() {
+  const user = useAuth(x => x.user); const patchUser = useAuth(x => x.patchUser);
+  const [f, setF] = useState({ fullName: user.fullName ?? '', email: user.email, avatarUrl: user.avatarUrl ?? null, currentPassword: '' });
+  const [state, setState] = useState('idle'); const [err, setErr] = useState('');
+  const emailChanged = f.email.trim().toLowerCase() !== user.email.toLowerCase();
+  const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
   const submit = async (e) => {
     e.preventDefault(); setErr(''); setState('saving');
-    try { await put('/profile', { ...f, examDate: f.examDate || null }); setState('saved'); setTimeout(() => setState('idle'), 2500); } catch (x) { setErr(x.message); setState('idle'); }
+    try {
+      const r = await put('/profile/account', { fullName: f.fullName, email: f.email, avatarUrl: f.avatarUrl, ...(emailChanged ? { currentPassword: f.currentPassword } : {}) });
+      patchUser({ fullName: r.fullName, email: r.email, avatarUrl: r.avatarUrl }); setF(p => ({ ...p, email: r.email, currentPassword: '' }));
+      setState('saved'); setTimeout(() => setState('idle'), 2500);
+    } catch (x) { setErr(x.message); setState('idle'); }
+  };
+  return (
+    <Item className="card">
+      <div className="stat-label mb-4 flex items-center gap-2"><UserRound size={13} /> Profil</div>
+      <form onSubmit={submit} className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Avatar name={user.username} url={f.avatarUrl} size={64} />
+          <div className="min-w-0"><div className="truncate text-base font-semibold text-slate-50">{f.fullName || `@${user.username}`}</div><div className="truncate text-xs text-slate-500">@{user.username}</div></div>
+        </div>
+        <fieldset>
+          <legend className="mb-2 text-xs text-slate-400">Avatar seç</legend>
+          <div className="grid grid-cols-6 gap-2 sm:grid-cols-8" role="radiogroup" aria-label="Avatar">
+            {AVATARS.map(u => (
+              <button key={u} type="button" role="radio" aria-checked={f.avatarUrl === u} aria-label="Avatar seç" onClick={() => setF(p => ({ ...p, avatarUrl: u }))}
+                className={clsx('rounded-full p-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent', f.avatarUrl === u ? 'bg-accent ring-2 ring-accent/40' : 'hover:bg-white/10')}>
+                <Avatar name="?" url={u} size={40} className="!h-full !w-full" /></button>))}
+          </div>
+          {f.avatarUrl && <button type="button" className="mt-2 text-xs text-slate-400 underline hover:text-slate-200" onClick={() => setF(p => ({ ...p, avatarUrl: null }))}>Avatarı kaldır</button>}
+        </fieldset>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2"><label htmlFor="pf">Ad soyad</label><input id="pf" maxLength={80} value={f.fullName} onChange={set('fullName')} placeholder="Örn. Ayşe Yılmaz" autoComplete="name" /></div>
+          <div className="sm:col-span-2"><label htmlFor="pe">E-posta</label><input id="pe" type="email" required maxLength={254} value={f.email} onChange={set('email')} autoComplete="email" /></div>
+          {emailChanged && <div className="sm:col-span-2"><label htmlFor="pp">Mevcut şifre <span className="text-slate-500">(e-posta değişimi için gerekli)</span></label><input id="pp" type="password" required maxLength={72} value={f.currentPassword} onChange={set('currentPassword')} autoComplete="current-password" /></div>}
+        </div>
+        <div className="flex items-center gap-3"><button className="btn" disabled={state === 'saving'}>Kaydet</button><span role="status" className="text-xs text-emerald-300">{state === 'saved' && 'Kaydedildi ✓'}</span></div>
+        {err && <p role="alert" className="text-xs text-red-300">{err}</p>}
+      </form>
+    </Item>
+  );
+}
+
+function Target() {
+  const mode = useExam(x => x.mode);
+  const [f, setF] = useState({ targetUniversity: '', targetDepartment: '', examDate: '' }); const [state, setState] = useState('idle'); const [err, setErr] = useState('');
+  useEffect(() => { get('/profile').then(p => setF({ targetUniversity: p.targetUniversity, targetDepartment: p.targetDepartment, examDate: p.examDates?.[mode] ?? '' })).catch(() => {}); }, [mode]);
+  const submit = async (e) => {
+    e.preventDefault(); setErr(''); setState('saving');
+    try { await put('/profile', { ...f, examType: mode, examDate: f.examDate || null }); setState('saved'); setTimeout(() => setState('idle'), 2500); } catch (x) { setErr(x.message); setState('idle'); }
   };
   return (
     <Item className="card">
@@ -84,8 +132,8 @@ function Target() {
       <form onSubmit={submit} className="space-y-3">
         <div><label htmlFor="tu">Hedef üniversite</label><input id="tu" maxLength={120} value={f.targetUniversity} onChange={e => setF(p => ({ ...p, targetUniversity: e.target.value }))} placeholder="Örn. Boğaziçi Üniversitesi" autoComplete="off" /></div>
         <div><label htmlFor="td">Hedef bölüm</label><input id="td" maxLength={120} value={f.targetDepartment} onChange={e => setF(p => ({ ...p, targetDepartment: e.target.value }))} placeholder="Örn. Bilgisayar Mühendisliği" autoComplete="off" /></div>
-        <div><label htmlFor="ed">DGS sınav tarihi</label><input id="ed" type="date" min={new Date().toISOString().slice(0, 10)} value={f.examDate} onChange={e => setF(p => ({ ...p, examDate: e.target.value }))} />
-          <p className="mt-1 text-xs text-slate-500">Boş bırakırsan geri sayım bir sonraki 19 Temmuz'u tahmini olarak gösterir. ÖSYM kesin tarihi açıklayınca buraya gir.</p></div>
+        <div><label htmlFor="ed">{mode} sınav tarihi</label><input id="ed" type="date" min={new Date().toISOString().slice(0, 10)} value={f.examDate} onChange={e => setF(p => ({ ...p, examDate: e.target.value }))} />
+          <p className="mt-1 text-xs text-slate-500">Boş bırakırsan geri sayım tahmini tarihi gösterir ({mode === 'DGS' ? 'bir sonraki 19 Temmuz' : "Haziran'ın 3. cumartesi"}). ÖSYM kesin tarihi açıklayınca buraya gir. DGS ve YKS tarihleri ayrı saklanır.</p></div>
         <div className="flex items-center gap-3"><button className="btn" disabled={state === 'saving'}>Kaydet</button>
           <span role="status" className="text-xs text-emerald-300">{state === 'saved' && 'Kaydedildi ✓'}</span></div>
         {err && <p role="alert" className="text-xs text-red-300">{err}</p>}
@@ -128,8 +176,8 @@ export default function Settings() {
     <Page>
       <Title>Ayarlar</Title>
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-        <div className="space-y-4"><Appearance /><Target /></div>
-        <Feedback />
+        <div className="space-y-4"><Profile /><Appearance /><Target /></div>
+        <div className="space-y-4"><SupportCard /><Feedback /></div>
       </div>
     </Page>
   );

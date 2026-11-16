@@ -4,7 +4,7 @@ import { AlertTriangle, TrendingUp, Layers, BookCheck, ChevronDown } from 'lucid
 import clsx from 'clsx';
 import { useTheme } from '../theme.js';
 import { get } from '../lib/api.js';
-import { DGS_TOPIC_GROUPS } from '../lib/curriculum.js';
+import { useExamCfg } from '../store.js';
 import { Page, Item, Title, Bar } from '../components/ui.jsx';
 import SortTable from '../components/SortTable.jsx';
 
@@ -15,7 +15,6 @@ export const LEVEL = {
   strong:     { label: 'Ustalaşıldı',          cls: 'bg-emerald-400/15 text-emerald-300', bar: 'bg-emerald-400' },
   none:       { label: 'Çalışılmadı',          cls: 'bg-white/[0.06] text-slate-400',     bar: 'bg-slate-500' },
 };
-const SUBJECTS = [['matematik', 'Matematik'], ['turkce', 'Türkçe']];
 const needsReview = m => m && m.level !== 'none' && (m.level === 'critical' || m.retention < 0.5);
 const since = d => d == null ? '—' : d === 0 ? 'bugün' : d === 1 ? 'dün' : `${d} gün önce`;
 const levelOfAvg = a => a < 40 ? 'critical' : a < 70 ? 'developing' : 'strong';
@@ -63,19 +62,22 @@ const Group = memo(function Group({ sk, group, rows, first, subjectCrit }) {
 });
 
 export default function Curriculum() {
+  const { cfg, q } = useExamCfg();
+  const SUBJECTS = useMemo(() => cfg.subjects.map(s => [s.key, s.label]), [cfg]);
+  const DGS_TOPIC_GROUPS = cfg.curriculum; // seçili sınav türünün müfredatı
   const [mastery, setMastery] = useState(null);
-  useEffect(() => { get('/mastery').then(r => setMastery(Object.fromEntries(r.topics.map(t => [t.subjectKey + ':' + t.topicKey, t])))).catch(() => setMastery({})); }, []);
+  useEffect(() => { get('/mastery' + q()).then(r => setMastery(Object.fromEntries(r.topics.map(t => [t.subjectKey + ':' + t.topicKey, t])))).catch(() => setMastery({})); }, []);
 
   const bySubject = useMemo(() => Object.fromEntries(SUBJECTS.map(([sk]) => [sk, DGS_TOPIC_GROUPS[sk].flatMap((g, gi) => g.topics.map((t, ti) => {
     const m = mastery?.[sk + ':' + t.value];
     return { key: sk + ':' + t.value, subject: sk, label: t.label, group: g.group, order: gi * 100 + ti, m, level: m?.level ?? 'none', score: m?.score ?? null };
-  }))])), [mastery]);
+  }))])), [mastery, cfg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Grup satırları ve kritik bayrağı yalnızca veri değişince yeniden hesaplanır (memo'lu Group'un prop'ları kararlı kalır)
   const grouped = useMemo(() => Object.fromEntries(SUBJECTS.map(([sk]) => [sk, {
     crit: bySubject[sk].some(r => r.level === 'critical'),
     groups: DGS_TOPIC_GROUPS[sk].map(g => ({ group: g.group, rows: bySubject[sk].filter(r => r.group === g.group) })),
-  }])), [bySubject]);
+  }])), [bySubject, cfg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const all = useMemo(() => Object.values(bySubject).flat(), [bySubject]);
   const A = useMemo(() => {
@@ -91,7 +93,7 @@ export default function Curriculum() {
           groups: DGS_TOPIC_GROUPS[sk].map(g => { const gs = rs.filter(r => r.group === g.group && r.level !== 'none'); return { group: g.group, n: gs.length, total: g.topics.length, avg: gs.length ? Math.round(gs.reduce((s, r) => s + r.score, 0) / gs.length) : null }; }) };
       }),
     };
-  }, [all, bySubject]);
+  }, [all, bySubject, cfg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mastery) return <div className="min-h-[60vh] text-slate-500">Yükleniyor…</div>;
 

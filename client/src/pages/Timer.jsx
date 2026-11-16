@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Square } from 'lucide-react';
 import { post, today } from '../lib/api.js';
-import { DGS_TOPIC_GROUPS } from '../lib/curriculum.js';
+import { useExamCfg } from '../store.js';
+import { validPick, firstTopic } from '../lib/topics.js';
 import clsx from 'clsx';
 import { Page, Item, Title } from '../components/ui.jsx';
 import Pomodoro from '../components/Pomodoro.jsx';
@@ -16,8 +17,10 @@ function Stopwatch() {
   const [acc, setAcc] = useState(saved.current?.acc ?? 0);            // birikmiş ms
   const [since, setSince] = useState(saved.current?.since ?? null);   // çalışıyorsa başlangıç zamanı
   const [now, setNow] = useState(Date.now());
-  const [subjectKey, setSubject] = useState(saved.current?.subjectKey ?? 'matematik');
-  const [topicKey, setTopic] = useState(saved.current?.topicKey ?? DGS_TOPIC_GROUPS.matematik[0].topics[0].value);
+  const { mode, cfg } = useExamCfg(); const G = cfg.curriculum;
+  const init = useRef(validPick(G, saved.current?.subjectKey, saved.current?.topicKey));
+  const [subjectKey, setSubject] = useState(init.current.subjectKey);
+  const [topicKey, setTopic] = useState(init.current.topicKey);
   const [q, setQ] = useState({ questionsSolved: 0, correctCount: 0, wrongCount: 0 });
   const [msg, setMsg] = useState('');
 
@@ -34,7 +37,7 @@ function Stopwatch() {
     setMsg('');
     if (minutes < 1) return setMsg('Kaydetmek için en az 1 dakika çalışmalısın.');
     try {
-      await post('/sessions', { subjectKey, topicKey, durationMinutes: Math.min(minutes, 1440), ...q, studyDate: today() });
+      await post('/sessions', { examType: mode, subjectKey, topicKey, durationMinutes: Math.min(minutes, 1440), ...q, studyDate: today() });
       setAcc(0); setSince(null); setQ({ questionsSolved: 0, correctCount: 0, wrongCount: 0 }); setMsg(`${minutes} dk kaydedildi ✓`);
     } catch (e) { setMsg(e.message); }
   };
@@ -52,11 +55,11 @@ function Stopwatch() {
       </Item>
       <Item className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div><label htmlFor="s">Ders</label>
-          <select id="s" value={subjectKey} onChange={e => { setSubject(e.target.value); setTopic(DGS_TOPIC_GROUPS[e.target.value][0].topics[0].value); }}>
-            <option value="matematik">Matematik</option><option value="turkce">Türkçe</option></select></div>
+          <select id="s" value={subjectKey} onChange={e => { setSubject(e.target.value); setTopic(firstTopic(G, e.target.value)); }}>
+            {cfg.subjects.map(x => <option key={x.key} value={x.key}>{x.label}</option>)}</select></div>
         <div className="lg:col-span-2"><label htmlFor="t">Konu</label>
           <select id="t" value={topicKey} onChange={e => setTopic(e.target.value)}>
-            {DGS_TOPIC_GROUPS[subjectKey].map(g => <optgroup key={g.group} label={g.group}>{g.topics.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</optgroup>)}</select></div>
+            {G[subjectKey].map(g => <optgroup key={g.group} label={g.group}>{g.topics.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}</optgroup>)}</select></div>
         <div><label htmlFor="qs">Çözülen soru</label><input id="qs" type="number" min={0} value={q.questionsSolved} onChange={num('questionsSolved')} /></div>
         <div><label htmlFor="qc">Doğru</label><input id="qc" type="number" min={0} value={q.correctCount} onChange={num('correctCount')} /></div>
         <div><label htmlFor="qw">Yanlış</label><input id="qw" type="number" min={0} value={q.wrongCount} onChange={num('wrongCount')} /></div>
