@@ -28,6 +28,13 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '20kb' }));
 app.use(cookieParser());
+// İndekslenecek herkese açık sayfalar (client/public/sitemap.xml ile aynı). Diğer her yol (API, panel, giriş, kayıt, bilinmeyen) noindex:
+// JS çalıştırmayan tarayıcılar için de geçerli olsun diye meta etiketine ek olarak başlıkla da bildirilir.
+const INDEXABLE = new Set(['/', '/gizlilik', '/kvkk', '/kosullar', '/cerez', '/robots.txt', '/sitemap.xml', '/favicon.svg', '/og-image.png', '/apple-touch-icon.png']);
+app.use((req, res, next) => {
+  if (!INDEXABLE.has(req.path) && !req.path.startsWith('/assets/')) res.set('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
 // Kişisel veriler: tarayıcı/ara önbellek asla saklamasın
 app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 app.use('/api', apiLimiter, originGuard);

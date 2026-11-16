@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useExam } from './store.js';
 import { Shell, Ambient } from './components/Layout.jsx';
+import RouteSEO from './components/RouteSEO.jsx';
 import { LEGAL_DOCS } from './lib/legal-docs.js';
 import { Login, Register, Forgot, Reset } from './pages/AuthPages.jsx';
 
@@ -21,10 +22,11 @@ export default function App() {
   const loc = useLocation();
   const { user, ready, init } = useAuth(); const config = useExam(s => s.config);
   useEffect(() => { init(); }, [init]);
+  const seo = <RouteSEO loggedIn={!!user} />;
   if (!ready) return <div className="p-10 text-center text-slate-500" role="status">Yükleniyor…</div>;
   if (user && !config) return <div className="p-10 text-center text-sm text-red-300" role="alert">Sunucuya ulaşılamadı. <button className="underline" onClick={() => init()}>Tekrar dene</button></div>;
   if (!user) return (
-    <><Ambient />
+    <>{seo}<Ambient />
       <Routes>
         <Route path="/" element={<Suspense fallback={null}><Landing /></Suspense>} />
         <Route path="/giris" element={<Login />} />
@@ -36,7 +38,7 @@ export default function App() {
       </Routes></>
   );
   return (
-    <Routes>
+    <>{seo}<Routes>
       <Route element={<Shell />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/calisma" element={<Study />} />
@@ -51,6 +53,6 @@ export default function App() {
       </Route>
       {LEGAL_DOCS.map(d => <Route key={d} path={`/${d}`} element={<Suspense fallback={null}><Legal /></Suspense>} />)}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    </Routes></>
   );
 }

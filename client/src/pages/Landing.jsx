@@ -8,6 +8,8 @@ import { useTheme } from '../theme.js';
 import ModeSwitch from '../components/ModeSwitch.jsx';
 import { net, fmt } from '../lib/api.js';
 import { REASONS } from '../lib/reasons.js';
+import JsonLd from '../components/JsonLd.jsx';
+import { SITE, DEFAULT_DESC } from '../hooks/useSEO.js';
 import LegalLinks from '../components/LegalLinks.jsx';
 import { EST, partMax, partNet, approxScore, blendYks } from '../lib/estimate.js';
 
@@ -199,12 +201,23 @@ function Faq() {
   );
 }
 
+const LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'Organization', '@id': `${SITE}/#org`, name: 'Auren Study', url: `${SITE}/`, logo: `${SITE}/favicon.svg` },
+    { '@type': 'WebSite', '@id': `${SITE}/#site`, url: `${SITE}/`, name: 'Auren Study', inLanguage: 'tr-TR', publisher: { '@id': `${SITE}/#org` } },
+    { '@type': 'WebApplication', name: 'Auren Study', url: `${SITE}/`, description: DEFAULT_DESC, applicationCategory: 'EducationalApplication', operatingSystem: 'Web', inLanguage: 'tr-TR',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'TRY' }, publisher: { '@id': `${SITE}/#org` } },
+    { '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+  ],
+};
+
 export default function Landing() {
   const { theme, toggleMode } = useTheme(); const light = theme === 'light';
-  useEffect(() => { document.title = 'Auren · DGS ve YKS için akıllı hibrit hazırlık sistemi'; }, []);
   const link = 'text-sm text-slate-400 transition hover:text-slate-100';
   return (
     <div className="relative">
+      <JsonLd data={LD} />
       <header className="sticky top-0 z-30 px-4 pt-3">
         <div className="glass-pill mx-auto flex max-w-6xl items-center justify-between gap-3 py-2 pl-5 pr-2">
           <Link to="/" className="text-lg font-bold text-slate-100" aria-label="Auren ana sayfa">Auren</Link>

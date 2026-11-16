@@ -352,3 +352,10 @@ test('hesap silme: şifre ister, verileri ve arkadaşlıkları temizler, oturum 
   assert.equal((await new Client().call('POST', '/auth/login', { identifier: uf.username, password: uf.password })).status, 401);
   assert.equal((await G.call('GET', '/auth/me')).status, 200);                                   // diğer hesap etkilenmez
 });
+
+test('SEO: noindex başlığı API/panel/giriş/bilinmeyen yollarda var, herkese açık sayfalarda yok', async () => {
+  const root = base.replace(/\/api$/, '');
+  const h = async p => (await fetch(root + p)).headers.get('x-robots-tag');
+  for (const p of ['/api/health', '/giris', '/kayit', '/calisma', '/admin', '/olmayan-sayfa']) assert.match(await h(p) ?? '', /noindex/, p);
+  for (const p of ['/', '/kvkk', '/gizlilik']) assert.equal(await h(p), null, p);
+});

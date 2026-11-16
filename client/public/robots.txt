@@ -1,3 +1,16 @@
 User-agent: *
+Allow: /
+# API ve oturum gerektiren panel yolları taranmaz
 Disallow: /api/
 Disallow: /admin
+Disallow: /calisma
+Disallow: /kronometre
+Disallow: /denemeler
+Disallow: /mufredat
+Disallow: /arkadaslar
+Disallow: /karsilastir
+Disallow: /ayarlar
+# /giris, /kayit, /sifremi-unuttum, /reset-password bilerek engellenmedi: tarayıcı noindex
+# (meta + X-Robots-Tag) bilgisini görebilsin diye taranır ama indekslenmez.
+
+Sitemap: https://aurenstudy.com.tr/sitemap.xml
