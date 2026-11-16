@@ -1,7 +1,7 @@
 name: Deploy
 
 # main'e her push: önce derleme/sözdizimi kontrolü, sonra API'nin VDS'te güncellenmesi.
-# Arayüzü Vercel kendi Git bağlantısıyla yayınlar (client/vercel.json); bu iş yalnızca API sunucusunu günceller.
+# Her şey VDS'te: arayüz bulutta derlenip artifact olarak VDS'e iner, API aynı portta onu servis eder.
 # Güvenlik: self-hosted runner kullanıldığı için tetikleyici yalnızca push'tur (pull_request yok → fork kodu VDS'te çalışmaz).
 on:
   push:
@@ -30,7 +30,15 @@ jobs:
             server/package-lock.json
       - name: Arayüz derlemesi
         working-directory: client
+        env:
+          VITE_CONTACT_EMAIL: ${{ vars.VITE_CONTACT_EMAIL }}
         run: npm ci && npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+          retention-days: 7
+          if-no-files-found: error
       - name: Sunucu sözdizimi kontrolü
         working-directory: server
         run: |
@@ -46,7 +54,11 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: API'yi güncelle (kopyala, bağımlılık, migrate, yeniden başlat, sağlık kontrolü)
+      - uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client-dist
+      - name: Güncelle (API + arayüz: kopyala, bağımlılık, migrate, yeniden başlat, sağlık kontrolü)
         shell: powershell
         env:
           AUREN_APP_DIR: ${{ vars.AUREN_APP_DIR }}

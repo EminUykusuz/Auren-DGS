@@ -1,5 +1,5 @@
 # Auren API dağıtım betiği (Windows VDS, GitHub Actions self-hosted runner üzerinde çalışır).
-# Akış: yedekle → sunucu kodunu kopyala (.env ve node_modules korunur) → npm ci → migrate → yeniden başlat → sağlık kontrolü.
+# Akış: yedekle → sunucu kodunu ve derlenmiş arayüzü (client-dist) kopyala (.env ve node_modules korunur) → npm ci → migrate → yeniden başlat → sağlık kontrolü.
 # Sağlık kontrolü başarısız olursa önceki sürüme otomatik döner ve iş başarısız sayılır.
 param(
   [string]$AppDir  = $(if ($env:AUREN_APP_DIR) { $env:AUREN_APP_DIR } else { 'C:\auren' }),
@@ -10,10 +10,18 @@ $ErrorActionPreference = 'Stop'
 $repo   = Split-Path -Parent $PSScriptRoot
 $srcNew = Join-Path $repo 'server'
 $srv    = Join-Path $AppDir 'server'
+$dist   = Join-Path $AppDir 'client\dist'      # sunucu ../../client/dist'i servis eder
+$distNew = Join-Path $repo 'client-dist'
+$distBak = Join-Path $AppDir 'backup\client-dist'
 $bak    = Join-Path $AppDir 'backup\server'
 $log    = Join-Path $AppDir 'logs'
 
 function Step($m) { Write-Host "`n==> $m" -ForegroundColor Green }
+function Copy-Dist($from, $to) {
+  robocopy $from $to /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+  if ($LASTEXITCODE -ge 8) { throw "robocopy (arayüz) başarısız (kod $LASTEXITCODE)" }
+  $global:LASTEXITCODE = 0
+}
 function Copy-Server($from, $to) {
   # /MIR hedefte olmayanı siler; .env ve node_modules hariç tutulduğu için silinmez
   robocopy $from $to /MIR /XD node_modules logs /XF .env /NFL /NDL /NJH /NJS /NP | Out-Null
@@ -51,17 +59,20 @@ function Wait-Healthy {
 
 Step "Ön kontrol (AppDir=$AppDir, Port=$Port)"
 Get-Command node -ErrorAction Stop | Out-Null
-New-Item -ItemType Directory -Force -Path $srv, $bak, $log | Out-Null
+if (-not (Test-Path (Join-Path $distNew 'index.html'))) { throw "Derlenmiş arayüz bulunamadı: $distNew (workflow artifact'ı indirmeli)" }
+New-Item -ItemType Directory -Force -Path $srv, $bak, $log, $dist, $distBak | Out-Null
 if (-not (Test-Path (Join-Path $srv '.env'))) { throw "$srv\.env bulunamadı. Üretim ayarlarını (DB, JWT_SECRET, CORS_ORIGINS...) bir kez elle oluşturun; deploy bu dosyaya dokunmaz." }
 
 Step 'Mevcut sürümü yedekle'
 if (Test-Path (Join-Path $srv 'src')) { Copy-Server $srv $bak }
+if (Test-Path (Join-Path $dist 'index.html')) { Copy-Dist $dist $distBak }
 
 Step 'API durduruluyor'
 Stop-Api
 
 Step 'Yeni kod kopyalanıyor'
 Copy-Server $srcNew $srv
+Copy-Dist $distNew $dist
 
 try {
   Step 'Bağımlılıklar (npm ci --omit=dev)'
@@ -85,6 +96,7 @@ catch {
   Write-Host 'Önceki sürüme dönülüyor...' -ForegroundColor Yellow
   try {
     Stop-Api
+    if (Test-Path (Join-Path $distBak 'index.html')) { Copy-Dist $distBak $dist }
     if (Test-Path (Join-Path $bak 'src')) { Copy-Server $bak $srv; Push-Location $srv; npm ci --omit=dev --no-audit --no-fund; Pop-Location }
     Start-Api
     if (Wait-Healthy) { Write-Host 'Önceki sürüm geri yüklendi ve çalışıyor.' -ForegroundColor Yellow } else { Write-Host 'Önceki sürüm de ayağa kalkmadı; elle müdahale gerekli.' -ForegroundColor Red }

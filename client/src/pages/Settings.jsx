@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2, UserRound, Layers } from 'lucide-react';
+import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2, UserRound, Layers, TriangleAlert } from 'lucide-react';
 import clsx from 'clsx';
 import { get, put, post } from '../lib/api.js';
 import { useTheme, THEMES, BACKGROUNDS, fileToBg } from '../theme.js';
@@ -7,6 +7,7 @@ import { Page, Item, Title } from '../components/ui.jsx';
 import { useExam, useAuth } from '../store.js';
 import Avatar, { AVATARS } from '../components/Avatar.jsx';
 import SupportCard from '../components/SupportCard.jsx';
+import { Link } from 'react-router-dom';
 import TrackPicker from '../components/TrackPicker.jsx';
 
 function Switch({ checked, onChange, label, hint }) {
@@ -189,12 +190,35 @@ function Feedback() {
   );
 }
 
+// Hesabı kalıcı silme (KVKK silme hakkı): iki adım — önce uyarı, sonra şifre ile onay
+function DeleteAccount() {
+  const user = useAuth(x => x.user); const [open, setOpen] = useState(false); const [pw, setPw] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  if (user.isAdmin) return null;
+  const submit = async (e) => {
+    e.preventDefault(); setErr(''); setBusy(true);
+    try { await post('/profile/delete-account', { password: pw }); window.location.replace('/'); }
+    catch (x) { setErr(x.message); setBusy(false); }
+  };
+  return (
+    <Item className="card !border-red-500/20">
+      <div className="stat-label mb-3 flex items-center gap-2 !text-red-300"><TriangleAlert size={13} /> Hesabı sil</div>
+      <p className="text-sm text-slate-400">Hesabın; çalışma kayıtların, denemelerin, ilerlemen, arkadaşlıkların ve geri bildirimlerinle birlikte <b className="text-slate-200">kalıcı olarak silinir</b>. Bu işlem geri alınamaz. Ayrıntı için <Link to="/kvkk" className="text-accent hover:underline">KVKK Aydınlatma Metni</Link>.</p>
+      {!open ? <button type="button" className="btn-ghost mt-4 !text-red-300" onClick={() => setOpen(true)}><Trash2 size={14} /> Hesabımı silmek istiyorum</button> : (
+        <form onSubmit={submit} className="mt-4 space-y-3">
+          <div><label htmlFor="dpw">Onaylamak için şifreni gir</label><input id="dpw" type="password" required autoComplete="current-password" maxLength={72} value={pw} onChange={e => setPw(e.target.value)} /></div>
+          {err && <p role="alert" className="text-xs text-red-300">{err}</p>}
+          <div className="flex gap-2"><button className="btn !bg-red-500/90 hover:!bg-red-500" disabled={busy || !pw}><Trash2 size={14} /> Kalıcı olarak sil</button><button type="button" className="btn-ghost" onClick={() => { setOpen(false); setPw(''); setErr(''); }}>Vazgeç</button></div>
+        </form>)}
+    </Item>
+  );
+}
+
 export default function Settings() {
   return (
     <Page>
       <Title>Ayarlar</Title>
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-        <div className="space-y-4"><Profile /><Track /><Appearance /><Target /></div>
+        <div className="space-y-4"><Profile /><Track /><Appearance /><Target /><DeleteAccount /></div>
         <div className="space-y-4"><SupportCard /><Feedback /></div>
       </div>
     </Page>

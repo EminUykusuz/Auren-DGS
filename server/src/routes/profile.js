@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import crypto from 'node:crypto';
-import { query } from '../db.js';
+import { query, tx } from '../db.js';
 import { config } from '../config.js';
 import bcrypt from 'bcryptjs';
 import { EXAM_TYPES } from '../exams.js';
@@ -92,6 +92,22 @@ r.post('/feedback', limiter, validate(z.object({
   const m = await sendFeedbackMail({ id: row.Id, username: u.Username, email: u.Email, ...d });
   if (m.status !== 'queued') await query(`UPDATE dbo.Feedback SET MailStatus=@s, MailError=@e WHERE Id=@id`, { s: m.status, e: m.error ?? null, id: row.Id });
   res.status(201).json({ id: row.Id, mail: m.status, mailConfigured });
+}));
+
+// Hesabı kalıcı sil (KVKK m.7/m.11): mevcut şifre ister; çalışma/deneme/ilerleme/geri bildirim kayıtları FK CASCADE ile,
+// arkadaşlıklar (CASCADE yok) elle silinir. Geri alınamaz. Yönetici hesabı kilitlenmeyi önlemek için silinemez.
+const delLimiter = rateLimit({ windowMs: 60 * 60_000, limit: 5, keyGenerator: req => `d${req.userId}`, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Çok fazla deneme. Lütfen daha sonra tekrar dene.' } });
+r.post('/profile/delete-account', delLimiter, validate(z.object({ password: z.string().min(1).max(72) }).strict()), wrap(async (req, res) => {
+  if (req.isAdmin) return res.status(403).json({ error: 'Yönetici hesabı buradan silinemez' });
+  const [u] = await query(`SELECT PasswordHash FROM dbo.Users WHERE Id=@id`, { id: req.userId });
+  if (!(await bcrypt.compare(req.body.password, u.PasswordHash))) return res.status(403).json({ error: 'Şifre yanlış' });
+  await tx(async q => {
+    await q(`DELETE FROM dbo.Friendships WHERE RequesterId=@id OR AddresseeId=@id`, { id: req.userId });
+    await q(`DELETE FROM dbo.Users WHERE Id=@id`, { id: req.userId });
+  });
+  res.clearCookie(config.cookieName, { path: '/', secure: config.cookieSecure, sameSite: config.cookieSameSite });
+  res.json({ ok: true });
 }));
 
 export default r;

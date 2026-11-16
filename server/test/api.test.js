@@ -333,3 +333,22 @@ test('YKS müfredatı TYT/AYT bölümlü: oturum bölümle birlikte doğrulanır
   assert.ok(cfg.parts.find(p => p.id === 'AYT').subjects.some(s => s.key === 'edebiyat'));
   assert.ok(!cfg.parts.find(p => p.id === 'TYT').subjects.some(s => s.key === 'edebiyat'));
 });
+
+test('hesap silme: şifre ister, verileri ve arkadaşlıkları temizler, oturum biter', async () => {
+  const F = new Client(), G = new Client(), uf = mk('fatma'), ug = mk('gizem');
+  assert.equal((await F.call('POST', '/auth/register', uf)).status, 201);
+  const g = await G.call('POST', '/auth/register', ug); assert.equal(g.status, 201);
+  const fid = (await query(`SELECT Id FROM dbo.Users WHERE Email=@e`, { e: uf.email }))[0].Id;
+  await F.call('POST', '/exams', { name: 'x', examType: 'DGS', results: { sayisal: { correct: 5, wrong: 1 } } });
+  await query(`INSERT INTO dbo.Friendships (RequesterId, AddresseeId, Status) SELECT @a, Id, 'accepted' FROM dbo.Users WHERE Email=@e`, { a: fid, e: ug.email }).catch(() => {});
+  assert.equal((await new Client().call('POST', '/profile/delete-account', { password: uf.password })).status, 401);
+  assert.equal((await F.call('POST', '/profile/delete-account', { password: 'yanlisSifre1' })).status, 403);
+  assert.equal((await F.call('POST', '/profile/delete-account', {})).status, 400);
+  assert.equal((await F.call('POST', '/profile/delete-account', { password: uf.password })).status, 200);
+  assert.equal((await query(`SELECT COUNT(*) n FROM dbo.Users WHERE Id=@i`, { i: fid }))[0].n, 0);
+  assert.equal((await query(`SELECT COUNT(*) n FROM dbo.Friendships WHERE RequesterId=@i OR AddresseeId=@i`, { i: fid }))[0].n, 0);
+  assert.equal((await query(`SELECT COUNT(*) n FROM dbo.TrialExams WHERE UserId=@i`, { i: fid }))[0].n, 0);
+  assert.equal((await F.call('GET', '/auth/me')).status, 401);                                   // eski çerez artık geçersiz
+  assert.equal((await new Client().call('POST', '/auth/login', { identifier: uf.username, password: uf.password })).status, 401);
+  assert.equal((await G.call('GET', '/auth/me')).status, 200);                                   // diğer hesap etkilenmez
+});
