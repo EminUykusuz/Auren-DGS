@@ -15,9 +15,9 @@ export const config = {
   jwtSecret,
   jwtTtl: '7d',
   cookieName: 'dgs_token',
-  origins: (process.env.CORS_ORIGINS || 'https://auren-dgs-jiwm.vercel.app,http://localhost:5050,http://127.0.0.1:5050,http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim()),
+  origins: (process.env.CORS_ORIGINS || 'http://localhost:5050,http://127.0.0.1:5050,http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim()),
   appUrl: process.env.APP_URL || 'http://localhost:5173',
-  // Çerez: HTTPS olmayan VDS'te COOKIE_SECURE=false; Vercel gibi farklı site için COOKIE_SAMESITE=none (+ HTTPS şart)
+  // Çerez: HTTPS olmayan VDS'te COOKIE_SECURE=false; çapraz site için COOKIE_SAMESITE=none (+ HTTPS şart)
   cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProd,
   cookieSameSite: process.env.COOKIE_SAMESITE || 'strict',
   bcryptRounds: 12,

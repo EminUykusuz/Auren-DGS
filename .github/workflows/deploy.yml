@@ -73,6 +73,6 @@ jobs:
       - name: "Güncelle (API + arayüz: kopyala, bağımlılık, migrate, yeniden başlat, sağlık kontrolü)"
         shell: powershell
         env:
-          AUREN_APP_DIR: ${{ vars.AUREN_APP_DIR }}
+          AUREN_APP_DIR: 'C:\Auren-DGS'
           AUREN_PORT: ${{ vars.AUREN_PORT }}
         run: ./deploy/deploy.ps1
