@@ -11,7 +11,7 @@ Her şey tek sunucuda (VDS): API ve arayüz aynı portta, aynı Express süreciy
 
 ## VDS'te bir kez yapılacaklar (Windows)
 
-1. **Node 22** kurulu olsun (`node -v`).
+1. Workflow, deploy işi başlamadan önce self-hosted runner'a **Node 22** kurar; VDS'e ayrıca sistem geneline kurman gerekmez.
 2. **Uygulama klasörü**: varsayılan `C:\auren`. İçinde `server\.env` dosyasını elle oluştur (`server/.env.example`'dan). Önemlisi: `NODE_ENV=production`, `JWT_SECRET`, DB bilgileri, `PORT`, `CORS_ORIGINS=https://aurenstudy.com.tr`, `APP_URL=https://aurenstudy.com.tr`. Site HTTPS değilse `COOKIE_SECURE=false` gerekir (HTTPS önerilir: önüne IIS/Caddy/nginx ile SSL koy). Deploy `.env`'e dokunmaz, git'e de girmez.
 3. **Runner kur**: GitHub'da repo → *Settings → Actions → Runners → New self-hosted runner → Windows*. Verilen komutları VDS'te PowerShell (yönetici) ile çalıştır. Etiketler varsayılan (`self-hosted`, `windows`) kalsın. Sonunda **hizmet olarak** kur: `.\config.cmd ... --runasservice` (VDS yeniden başlayınca runner da açılır). Runner hesabı Hizmet/Zamanlanmış Görev oluşturabilmeli (yönetici veya SYSTEM).
 4. **API süreci**: `AurenAPI` adlı bir Windows hizmeti (örn. NSSM ile) varsa deploy onu yeniden başlatır. Yoksa ilk deploy `AurenAPI` adlı, açılışta başlayan bir zamanlanmış görev oluşturur. Eskiden `BASLAT.bat` ile açtığın pencereyi kapat ki 5050 portu çakışmasın (betik, portu tutan eski node sürecini de kapatır).
