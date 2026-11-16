@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
-import { TOPIC_KEYS, PARTS, partOf, EXAM_TYPES } from '../exams.js';
+import { TOPIC_KEYS, PARTS, partOf, defaultPartOf, EXAM_TYPES } from '../exams.js';
 import { net, sectionNets } from '../calc.js';
 import { requireAuth, resolveExam, validate, wrap } from '../security.js';
 
@@ -15,37 +15,46 @@ const cnt = z.number().int().min(0).max(5000);
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 
 // Ders/konu, seçili sınav türünün müfredatında olmalı
-const topicOk = (x, subjectKey, topicKey) => !!TOPIC_KEYS[x]?.[subjectKey]?.has(topicKey);
+const topicOk = (x, part, subjectKey, topicKey) => !!TOPIC_KEYS[x]?.[part]?.[subjectKey]?.has(topicKey);
+// Bölüm (DGS | TYT | AYT): istekte yoksa sınav türünün ilk bölümü; geçersizse 400
+const partParam = z.string().max(3).optional();
+const resolvePart = (req, res, raw) => {
+  const part = raw ?? defaultPartOf(req.examType);
+  if (!partOf(req.examType, part)) { res.status(400).json({ error: 'Geçersiz bölüm' }); return null; }
+  return part;
+};
 const badTopic = res => res.status(400).json({ error: 'Geçersiz veri', details: [{ path: 'topicKey', message: 'Konu bu sınav türünün müfredatında yok' }] });
 
 /* ---------- Çalışma oturumları ---------- */
 const sessionSchema = z.object({
-  examType, subjectKey: z.string().max(20), topicKey: z.string().max(60),
+  examType, part: partParam, subjectKey: z.string().max(20), topicKey: z.string().max(60),
   durationMinutes: z.number().int().min(1).max(1440),
   questionsSolved: cnt, correctCount: cnt, wrongCount: cnt, studyDate: date,
 }).strict().refine(d => d.correctCount + d.wrongCount <= d.questionsSolved, { message: 'Doğru + yanlış, çözülen sorudan fazla olamaz', path: ['questionsSolved'] });
 
 r.get('/sessions', wrap(async (req, res) => {
-  const rows = await query(`SELECT TOP 200 Id, SubjectKey, TopicKey, DurationMinutes, QuestionsSolved, CorrectCount, WrongCount, CONVERT(char(10),StudyDate,23) AS StudyDate
-    FROM dbo.StudySessions WHERE UserId=@me AND ExamType=@x ORDER BY StudyDate DESC, Id DESC`, { me: req.userId, x: req.examType });
-  res.json({ examType: req.examType, sessions: rows.map(x => ({ ...x, Net: net(x.CorrectCount, x.WrongCount) })) });
+  const part = req.query.part === undefined ? null : resolvePart(req, res, String(req.query.part)); if (req.query.part !== undefined && !part) return;
+  const rows = await query(`SELECT TOP 200 Id, ExamPart, SubjectKey, TopicKey, DurationMinutes, QuestionsSolved, CorrectCount, WrongCount, CONVERT(char(10),StudyDate,23) AS StudyDate
+    FROM dbo.StudySessions WHERE UserId=@me AND ExamType=@x AND (@p IS NULL OR ExamPart=@p) ORDER BY StudyDate DESC, Id DESC`, { me: req.userId, x: req.examType, p: part });
+  res.json({ examType: req.examType, part, sessions: rows.map(x => ({ ...x, Net: net(x.CorrectCount, x.WrongCount) })) });
 }));
 
 r.post('/sessions', validate(sessionSchema), wrap(async (req, res) => {
   const d = req.body, x = req.examType;
-  if (!topicOk(x, d.subjectKey, d.topicKey)) return badTopic(res);
+  const part = resolvePart(req, res, d.part); if (!part) return;
+  if (!topicOk(x, part, d.subjectKey, d.topicKey)) return badTopic(res);
   const id = await tx(async q => {
-    const [row] = await q(`INSERT INTO dbo.StudySessions (UserId,ExamType,SubjectKey,TopicKey,DurationMinutes,QuestionsSolved,CorrectCount,WrongCount,StudyDate)
-      OUTPUT INSERTED.Id VALUES (@me,@x,@s,@t,@dur,@qs,@c,@w,CAST(@d AS date))`,
-      { me: req.userId, x, s: d.subjectKey, t: d.topicKey, dur: d.durationMinutes, qs: d.questionsSolved, c: d.correctCount, w: d.wrongCount, d: d.studyDate });
+    const [row] = await q(`INSERT INTO dbo.StudySessions (UserId,ExamType,ExamPart,SubjectKey,TopicKey,DurationMinutes,QuestionsSolved,CorrectCount,WrongCount,StudyDate)
+      OUTPUT INSERTED.Id VALUES (@me,@x,@pt,@s,@t,@dur,@qs,@c,@w,CAST(@d AS date))`,
+      { me: req.userId, x, pt: part, s: d.subjectKey, t: d.topicKey, dur: d.durationMinutes, qs: d.questionsSolved, c: d.correctCount, w: d.wrongCount, d: d.studyDate });
     // İlerlemeyi sunucu tarafında güncelle (istemciye güvenilmez)
-    await q(`MERGE dbo.SubjectProgress AS t USING (SELECT @me AS UserId, @x AS ExamType, @s AS SubjectKey, @t AS TopicKey) AS s
-      ON t.UserId=s.UserId AND t.ExamType=s.ExamType AND t.SubjectKey=s.SubjectKey AND t.TopicKey=s.TopicKey
+    await q(`MERGE dbo.SubjectProgress AS t USING (SELECT @me AS UserId, @x AS ExamType, @pt AS ExamPart, @s AS SubjectKey, @t AS TopicKey) AS s
+      ON t.UserId=s.UserId AND t.ExamType=s.ExamType AND t.ExamPart=s.ExamPart AND t.SubjectKey=s.SubjectKey AND t.TopicKey=s.TopicKey
       WHEN MATCHED THEN UPDATE SET CompletedQuestions = t.CompletedQuestions + @qs,
         Status = CASE WHEN t.CompletedQuestions + @qs >= t.TargetQuestions THEN 'completed' ELSE 'in_progress' END
-      WHEN NOT MATCHED THEN INSERT (UserId,ExamType,SubjectKey,TopicKey,Status,CompletedQuestions)
-        VALUES (@me,@x,@s,@t, CASE WHEN @qs >= 100 THEN 'completed' ELSE 'in_progress' END, @qs);`,
-      { me: req.userId, x, s: d.subjectKey, t: d.topicKey, qs: d.questionsSolved });
+      WHEN NOT MATCHED THEN INSERT (UserId,ExamType,ExamPart,SubjectKey,TopicKey,Status,CompletedQuestions)
+        VALUES (@me,@x,@pt,@s,@t, CASE WHEN @qs >= 100 THEN 'completed' ELSE 'in_progress' END, @qs);`,
+      { me: req.userId, x, pt: part, s: d.subjectKey, t: d.topicKey, qs: d.questionsSolved });
     return row.Id;
   });
   res.status(201).json({ id });
@@ -53,11 +62,11 @@ r.post('/sessions', validate(sessionSchema), wrap(async (req, res) => {
 
 r.delete('/sessions/:id', validate(idParam, 'params'), wrap(async (req, res) => {
   const out = await tx(async q => {
-    const [s] = await q(`DELETE FROM dbo.StudySessions OUTPUT DELETED.ExamType, DELETED.SubjectKey, DELETED.TopicKey, DELETED.QuestionsSolved WHERE Id=@id AND UserId=@me`, { id: req.params.id, me: req.userId });
+    const [s] = await q(`DELETE FROM dbo.StudySessions OUTPUT DELETED.ExamType, DELETED.ExamPart, DELETED.SubjectKey, DELETED.TopicKey, DELETED.QuestionsSolved WHERE Id=@id AND UserId=@me`, { id: req.params.id, me: req.userId });
     if (!s) return false;
     await q(`UPDATE dbo.SubjectProgress SET CompletedQuestions = CASE WHEN CompletedQuestions > @qs THEN CompletedQuestions - @qs ELSE 0 END,
       Status = CASE WHEN CompletedQuestions - @qs >= TargetQuestions THEN 'completed' WHEN CompletedQuestions - @qs > 0 THEN 'in_progress' ELSE 'not_started' END
-      WHERE UserId=@me AND ExamType=@x AND SubjectKey=@s AND TopicKey=@t`, { me: req.userId, x: s.ExamType, s: s.SubjectKey, t: s.TopicKey, qs: s.QuestionsSolved });
+      WHERE UserId=@me AND ExamType=@x AND ExamPart=@pt AND SubjectKey=@s AND TopicKey=@t`, { me: req.userId, x: s.ExamType, pt: s.ExamPart, s: s.SubjectKey, t: s.TopicKey, qs: s.QuestionsSolved });
     return true;
   });
   if (!out) return res.status(404).json({ error: 'Bulunamadı' });
@@ -65,7 +74,7 @@ r.delete('/sessions/:id', validate(idParam, 'params'), wrap(async (req, res) => 
 }));
 
 /* ---------- Deneme sınavları (net sunucuda hesaplanır: 4 yanlış 1 doğru) ---------- */
-const REASONS = ['dikkat', 'konu', 'sure', 'formul', 'diger'];
+const REASONS = ['dikkat', 'islem', 'konu', 'sure', 'formul', 'diger'];
 const errItem = z.object({ subject: z.string().max(10), reason: z.enum(REASONS), count: z.number().int().min(1).max(50) }).strict();
 const errList = z.array(errItem).max(30);
 const answer = z.object({ correct: z.number().int().min(0).max(120), wrong: z.number().int().min(0).max(120) }).strict();
@@ -164,22 +173,24 @@ r.post('/calc', validate(z.object({ correct: z.number().int().min(0).max(120), w
 
 /* ---------- Konu ilerlemesi ---------- */
 r.get('/progress', wrap(async (req, res) => {
-  const rows = await query(`SELECT SubjectKey, TopicKey, Status, TargetQuestions, CompletedQuestions FROM dbo.SubjectProgress WHERE UserId=@me AND ExamType=@x`, { me: req.userId, x: req.examType });
-  res.json({ examType: req.examType, progress: rows });
+  const part = resolvePart(req, res, req.query.part === undefined ? undefined : String(req.query.part)); if (!part) return;
+  const rows = await query(`SELECT SubjectKey, TopicKey, Status, TargetQuestions, CompletedQuestions FROM dbo.SubjectProgress WHERE UserId=@me AND ExamType=@x AND ExamPart=@p`, { me: req.userId, x: req.examType, p: part });
+  res.json({ examType: req.examType, part, progress: rows });
 }));
 
 r.put('/progress', validate(z.object({
-  examType, subjectKey: z.string().max(20), topicKey: z.string().max(60),
+  examType, part: partParam, subjectKey: z.string().max(20), topicKey: z.string().max(60),
   status: z.enum(['not_started', 'in_progress', 'completed']).optional(),
   targetQuestions: z.number().int().min(1).max(10000).optional(),
 }).strict()), wrap(async (req, res) => {
   const d = req.body, x = req.examType;
-  if (!topicOk(x, d.subjectKey, d.topicKey)) return badTopic(res);
-  await query(`MERGE dbo.SubjectProgress AS t USING (SELECT @me AS UserId, @x AS ExamType, @s AS SubjectKey, @t AS TopicKey) AS s
-    ON t.UserId=s.UserId AND t.ExamType=s.ExamType AND t.SubjectKey=s.SubjectKey AND t.TopicKey=s.TopicKey
+  const part = resolvePart(req, res, d.part); if (!part) return;
+  if (!topicOk(x, part, d.subjectKey, d.topicKey)) return badTopic(res);
+  await query(`MERGE dbo.SubjectProgress AS t USING (SELECT @me AS UserId, @x AS ExamType, @pt AS ExamPart, @s AS SubjectKey, @t AS TopicKey) AS s
+    ON t.UserId=s.UserId AND t.ExamType=s.ExamType AND t.ExamPart=s.ExamPart AND t.SubjectKey=s.SubjectKey AND t.TopicKey=s.TopicKey
     WHEN MATCHED THEN UPDATE SET Status=COALESCE(@st,t.Status), TargetQuestions=COALESCE(@tq,t.TargetQuestions)
-    WHEN NOT MATCHED THEN INSERT (UserId,ExamType,SubjectKey,TopicKey,Status,TargetQuestions) VALUES (@me,@x,@s,@t,COALESCE(@st,'not_started'),COALESCE(@tq,100));`,
-    { me: req.userId, x, s: d.subjectKey, t: d.topicKey, st: d.status ?? null, tq: d.targetQuestions ?? null });
+    WHEN NOT MATCHED THEN INSERT (UserId,ExamType,ExamPart,SubjectKey,TopicKey,Status,TargetQuestions) VALUES (@me,@x,@pt,@s,@t,COALESCE(@st,'not_started'),COALESCE(@tq,100));`,
+    { me: req.userId, x, pt: part, s: d.subjectKey, t: d.topicKey, st: d.status ?? null, tq: d.targetQuestions ?? null });
   res.json({ ok: true });
 }));
 

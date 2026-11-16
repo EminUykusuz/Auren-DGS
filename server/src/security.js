@@ -19,9 +19,9 @@ export async function requireAuth(req, res, next) {
     if (!token) return res.status(401).json({ error: 'Oturum gerekli' });
     const { sub } = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
     // Yetki her istekte veritabanından okunur: askıya alınan / yetkisi alınan kullanıcı anında etkilenir
-    const [u] = await query(`SELECT Id, IsAdmin, IsDisabled, ExamMode FROM dbo.Users WHERE Id=@id`, { id: sub });
+    const [u] = await query(`SELECT Id, IsAdmin, IsDisabled, ExamMode, ExamTrack FROM dbo.Users WHERE Id=@id`, { id: sub });
     if (!u || u.IsDisabled) return res.status(401).json({ error: 'Oturum geçersiz' });
-    req.userId = u.Id; req.isAdmin = !!u.IsAdmin; req.examMode = u.ExamMode;
+    req.userId = u.Id; req.isAdmin = !!u.IsAdmin; req.examMode = u.ExamMode; req.examTrack = u.ExamTrack;
     next();
   } catch { res.status(401).json({ error: 'Oturum geçersiz' }); }
 }
@@ -77,6 +77,8 @@ export function errorHandler(err, req, res, _next) {
 export function resolveExam(req, res, next) {
   const raw = req.query?.examType ?? req.body?.examType;
   if (raw !== undefined && !isExamType(raw)) return res.status(400).json({ error: 'Geçersiz sınav türü' });
-  req.examType = raw ?? req.examMode ?? 'DGS';
+  // Tek sınava kayıtlı hesap yalnızca o sınavın verisine erişir; hibrit hesap ikisi arasında geçebilir
+  const t = req.examTrack;
+  req.examType = (t === 'DGS' || t === 'YKS') ? t : (raw ?? req.examMode ?? 'DGS');
   next();
 }

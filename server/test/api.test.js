@@ -294,3 +294,42 @@ test('profil kimliği: ad soyad, avatar allowlist, e-posta değişimi şifre ist
   assert.equal((await D.call('PUT', '/profile/account', { ...base, email: nm, avatarUrl: null })).status, 200);
   assert.equal((await D.call('GET', '/auth/me')).json.user.avatarUrl, null);
 });
+
+test('hesap türü: tek sınav hesabı moda kilitlenir, hibrit ikisi arasında geçer; işlem hatası nedeni geçerli', async () => {
+  const x = new Client(), u = mk('track');
+  assert.equal((await x.call('POST', '/auth/register', { ...u, examTrack: 'LGS' })).status, 400);
+  const r = await x.call('POST', '/auth/register', { ...u, examTrack: 'YKS' });
+  assert.equal(r.status, 201);
+  const me = (await x.call('GET', '/auth/me')).json.user;
+  assert.equal(me.examMode, 'YKS'); assert.equal(me.examTrack, 'YKS');
+  assert.equal((await x.call('PUT', '/profile/mode', { examMode: 'DGS' })).status, 409);       // YKS hesabı DGS'ye geçemez
+  assert.equal((await x.call('GET', '/exams?examType=DGS')).json.exams.length, 0);              // DGS isteği YKS'ye çevrilir
+  assert.equal((await x.call('PUT', '/profile/track', { examTrack: 'BOTH' })).status, 200);
+  assert.equal((await x.call('PUT', '/profile/mode', { examMode: 'DGS' })).status, 200);
+  assert.equal((await x.call('PUT', '/profile/track', { examTrack: 'DGS' })).json.examMode, 'DGS');
+  const ex = await x.call('POST', '/exams', { examType: 'DGS', part: 'DGS', examName: 'T', examDate: '2025-01-01',
+    results: { matematik: { correct: 20, wrong: 5 }, turkce: { correct: 20, wrong: 5 } }, errors: [{ subject: 'matematik', reason: 'islem', count: 3 }] });
+  assert.equal(ex.status, 201);
+});
+
+test('YKS müfredatı TYT/AYT bölümlü: oturum bölümle birlikte doğrulanır ve ayrı tutulur', async () => {
+  const x = new Client(), u = mk('part');
+  assert.equal((await x.call('POST', '/auth/register', { ...u, examTrack: 'YKS' })).status, 201);
+  const ses = (part, subjectKey, topicKey) => x.call('POST', '/sessions', { examType: 'YKS', part, subjectKey, topicKey, durationMinutes: 30, questionsSolved: 20, correctCount: 15, wrongCount: 5, studyDate: '2025-01-01' });
+  assert.equal((await ses('AYT', 'matematik', 'turev')).status, 201);
+  assert.equal((await ses('TYT', 'matematik', 'turev')).status, 400);          // türev yalnızca AYT
+  assert.equal((await ses('TYT', 'edebiyat', 'divan')).status, 400);           // edebiyat yalnızca AYT
+  assert.equal((await ses('TYT', 'turkce', 'paragraf')).status, 201);
+  assert.equal((await ses('AYT', 'turkce', 'paragraf')).status, 400);          // Türkçe yalnızca TYT
+  assert.equal((await ses('TYT', 'tarih', 'kurtulus-savasi')).status, 201);
+  assert.equal((await ses('AYT', 'tarih', 'kurtulus-savasi')).status, 201);    // ortak konu: iki bölümde ayrı ilerler
+  assert.equal((await ses('XYZ', 'tarih', 'kurtulus-savasi')).status, 400);
+  const ayt = (await x.call('GET', '/sessions?examType=YKS&part=AYT')).json.sessions, tyt = (await x.call('GET', '/sessions?examType=YKS&part=TYT')).json.sessions;
+  assert.equal(ayt.length, 2); assert.equal(tyt.length, 2);
+  assert.ok(ayt.every(s => s.ExamPart === 'AYT'));
+  const pa = (await x.call('GET', '/progress?examType=YKS&part=AYT')).json.progress, pt = (await x.call('GET', '/progress?examType=YKS&part=TYT')).json.progress;
+  assert.equal(pa.filter(p => p.TopicKey === 'kurtulus-savasi').length, 1); assert.equal(pt.filter(p => p.TopicKey === 'kurtulus-savasi').length, 1);
+  const cfg = (await x.call('GET', '/exams-config')).json.types.find(t => t.id === 'YKS');
+  assert.ok(cfg.parts.find(p => p.id === 'AYT').subjects.some(s => s.key === 'edebiyat'));
+  assert.ok(!cfg.parts.find(p => p.id === 'TYT').subjects.some(s => s.key === 'edebiyat'));
+});

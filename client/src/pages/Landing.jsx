@@ -8,6 +8,7 @@ import { useTheme } from '../theme.js';
 import ModeSwitch from '../components/ModeSwitch.jsx';
 import { net, fmt } from '../lib/api.js';
 import { REASONS } from '../lib/reasons.js';
+import LegalLinks from '../components/LegalLinks.jsx';
 import { EST, partMax, partNet, approxScore, blendYks } from '../lib/estimate.js';
 
 /* Landing: uygulamanın panel diliyle aynı — cam kartlar, tema değişkenleri, seçili sınava göre vurgu rengi. */
@@ -281,6 +282,7 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-slate-400">
           <span className="font-bold text-slate-200">Auren Study <span className="ml-1 text-xs font-normal text-slate-500">aurenstudy.com.tr</span></span>
           <nav aria-label="Alt menü" className="flex gap-6"><a href="#ozellikler" className={link}>Özellikler</a><a href="#sss" className={link}>SSS</a><Link to="/giris" className={link}>Giriş</Link><Link to="/kayit" className={link}>Kayıt ol</Link></nav>
+          <LegalLinks className="w-full justify-center text-xs text-slate-500 md:order-last" />
           <p className="text-xs text-slate-500">Geliştirici &amp; tasarımcı: <a className="text-slate-300 hover:underline" href="https://github.com/EminUykusuz" target="_blank" rel="noopener noreferrer">Emin Uykusuz</a> · <a className="text-slate-300 hover:underline" href="https://instagram.com/eminuyksz" target="_blank" rel="noopener noreferrer">@eminuyksz</a></p>
         </div>
       </footer>

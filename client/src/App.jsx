@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useExam } from './store.js';
 import { Shell, Ambient } from './components/Layout.jsx';
+import { LEGAL_DOCS } from './lib/legal-docs.js';
 import { Login, Register, Forgot, Reset } from './pages/AuthPages.jsx';
 
 const Landing = lazy(() => import('./pages/Landing.jsx'));
@@ -13,6 +14,7 @@ const Curriculum = lazy(() => import('./pages/Curriculum.jsx'));
 const Friends = lazy(() => import('./pages/Friends.jsx'));
 const Battle = lazy(() => import('./pages/Battle.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Legal = lazy(() => import('./pages/Legal.jsx'));
 const Admin = lazy(() => import('./pages/Admin.jsx'));
 
 export default function App() {
@@ -29,6 +31,7 @@ export default function App() {
         <Route path="/kayit" element={<Register />} />
         <Route path="/sifremi-unuttum" element={<Forgot />} />
         <Route path="/reset-password" element={<Reset />} />
+        {LEGAL_DOCS.map(d => <Route key={d} path={`/${d}`} element={<Suspense fallback={null}><Legal /></Suspense>} />)}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes></>
   );
@@ -46,6 +49,7 @@ export default function App() {
         <Route path="/ayarlar" element={<Settings />} />
         {user.isAdmin && <Route path="/admin/*" element={<Admin />} />}
       </Route>
+      {LEGAL_DOCS.map(d => <Route key={d} path={`/${d}`} element={<Suspense fallback={null}><Legal /></Suspense>} />)}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

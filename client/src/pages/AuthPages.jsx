@@ -126,6 +126,10 @@ export function Register() {
           <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className={clsx('h-1 flex-1 rounded-full transition-colors duration-300', i < st ? (st >= 3 ? 'bg-accent' : st === 2 ? 'bg-amber-400' : 'bg-red-400') : 'bg-white/10')} />)}</div>
           <p className="mt-1 text-xs text-slate-500" role="status">{st >= 0 ? STRENGTH[st] + ' · ' : ''}En az 8 karakter, harf ve rakam içermeli.</p>
         </Field>
+        <motion.label variants={item} className="flex cursor-pointer items-start gap-2.5 !text-xs !text-slate-400">
+          <input type="checkbox" name="terms" required className="mt-0.5 !h-4 !w-4 !p-0 accent-[rgb(var(--accent))]" />
+          <span><Link className="text-accent hover:underline" to="/kosullar" target="_blank">Kullanım Koşulları</Link>&apos;nı ve <Link className="text-accent hover:underline" to="/gizlilik" target="_blank">Gizlilik Politikası</Link>&apos;nı okudum; <Link className="text-accent hover:underline" to="/kvkk" target="_blank">KVKK Aydınlatma Metni</Link> kapsamında verilerimin işlenmesini kabul ediyorum.</span>
+        </motion.label>
         <Msg {...f} /><Submit busy={f.busy}>{track === 'BOTH' ? 'Hibrit hesabı oluştur' : `${track} için kayıt ol`}</Submit>
       </Form>
     </Frame>

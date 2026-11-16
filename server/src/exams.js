@@ -1,7 +1,7 @@
 // Sınav türleri (DGS | YKS), bölümleri, soru sayıları ve müfredat — tek kaynak.
 // Net kuralı (DGS, TYT, AYT): 4 yanlış 1 doğruyu götürür → calc.js
 import { DGS_TOPIC_GROUPS } from './curriculum.js';
-import { YKS_TOPIC_GROUPS } from './curriculum-yks.js';
+import { YKS_TOPIC_GROUPS, YKS_BY_PART } from './curriculum-yks.js';
 
 export const EXAM_TYPES = ['DGS', 'YKS'];
 export const DEFAULT_EXAM = 'DGS';
@@ -20,12 +20,17 @@ export const PARTS = {
 export const EXAM_LABEL = { DGS: 'Auren DGS', YKS: 'Auren YKS' };
 
 const SUBJECT_LABELS = { matematik: 'Matematik', turkce: 'Türkçe', geometri: 'Geometri', fizik: 'Fizik', kimya: 'Kimya', biyoloji: 'Biyoloji', edebiyat: 'Edebiyat', tarih: 'Tarih', cografya: 'Coğrafya', felsefe: 'Felsefe', din: 'Din Kültürü' };
-export const TOPIC_GROUPS = { DGS: DGS_TOPIC_GROUPS, YKS: YKS_TOPIC_GROUPS };
-const map = (f) => Object.fromEntries(EXAM_TYPES.map(x => [x, f(x)]));
-export const SUBJECTS = map(x => Object.keys(TOPIC_GROUPS[x]).map(key => ({ key, label: SUBJECT_LABELS[key] ?? key })));
-export const TOPICS = map(x => Object.fromEntries(Object.entries(TOPIC_GROUPS[x]).map(([k, groups]) => [k, groups.flatMap(gr => gr.topics)])));
-export const TOPIC_KEYS = map(x => Object.fromEntries(Object.entries(TOPICS[x]).map(([k, ts]) => [k, new Set(ts.map(t => t.value))])));
-export const TOTAL_TOPICS = map(x => Object.values(TOPICS[x]).reduce((s, ts) => s + ts.length, 0));
+// Müfredat bölüm bazlıdır: DGS tek bölüm; YKS = TYT | AYT (her biri kendi ders ve konu listesine sahip)
+export const CURRICULUM = { DGS: { DGS: DGS_TOPIC_GROUPS }, YKS: YKS_BY_PART };
+const flat = (groups) => groups.flatMap(gr => gr.topics);
+const lab = (key) => SUBJECT_LABELS[key] ?? key;
+export const PART_SUBJECTS = Object.fromEntries(EXAM_TYPES.map(x => [x, Object.fromEntries(Object.entries(CURRICULUM[x]).map(([p, cur]) => [p, Object.keys(cur).map(key => ({ key, label: lab(key) }))]))]));
+export const TOPIC_KEYS = Object.fromEntries(EXAM_TYPES.map(x => [x, Object.fromEntries(Object.entries(CURRICULUM[x]).map(([p, cur]) =>
+  [p, Object.fromEntries(Object.entries(cur).map(([k, groups]) => [k, new Set(flat(groups).map(t => t.value))]))]))]));
+export const TOTAL_TOPICS = Object.fromEntries(EXAM_TYPES.map(x => [x, Object.fromEntries(Object.entries(CURRICULUM[x]).map(([p, cur]) =>
+  [p, Object.values(cur).reduce((s, groups) => s + flat(groups).length, 0)]))]));
+export const topicCount = (x, part, subject) => flat(CURRICULUM[x]?.[part]?.[subject] ?? []).length;
+export const defaultPartOf = (x) => Object.keys(PARTS[x])[0];
 
 export const partOf = (examType, part) => PARTS[examType]?.[part] ?? null;
 // Bir sınav türündeki tüm deneme bölümü anahtarları (hata nedenleri için geçerli "ders" kümesi)
@@ -34,7 +39,7 @@ export const sectionKeys = (examType) => [...new Set(Object.values(PARTS[examTyp
 // İstemciye giden yapılandırma
 export const publicConfig = () => ({
   types: EXAM_TYPES.map(id => ({
-    id, label: EXAM_LABEL[id], subjects: SUBJECTS[id], curriculum: TOPIC_GROUPS[id],
-    parts: Object.entries(PARTS[id]).map(([pid, p]) => ({ id: pid, label: p.label, sections: p.sections })),
+    id, label: EXAM_LABEL[id],
+    parts: Object.entries(PARTS[id]).map(([pid, p]) => ({ id: pid, label: p.label, sections: p.sections, subjects: PART_SUBJECTS[id][pid], curriculum: CURRICULUM[id][pid] })),
   })),
 });

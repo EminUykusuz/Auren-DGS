@@ -41,3 +41,30 @@ export const YKS_TOPIC_GROUPS = {
     g('Din Kültürü', ['İnanç ve İbadet', 'inanc-ibadet'], ['Ahlak ve Değerler', 'ahlak-degerler'], ["Hz. Muhammed ve Kur'an", 'hz-muhammed-kuran'], ['İslam Düşüncesinde Yorumlar', 'islam-dusunce']),
   ],
 };
+
+/* ---------- TYT / AYT kırılımı ----------
+   Her konu hangi bölümde çalışılır: belirtilmeyen konu iki bölümde de vardır. */
+const TYT_SUBJECTS = new Set(['turkce']);                       // yalnızca TYT
+const AYT_SUBJECTS = new Set(['edebiyat']);                     // yalnızca AYT
+const TYT_ONLY_GROUPS = new Set(['Temel Matematik', 'Denklem ve Problemler']);
+const AYT_ONLY_GROUPS = new Set(['AYT Matematik']);
+const TYT_ONLY_TOPICS = new Set(['biyoloji:hucre', 'biyoloji:siniflandirma', 'biyoloji:ekosistem']);
+const AYT_ONLY_TOPICS = new Set(['geometri:analitik', 'geometri:donusumler', 'fizik:modern-fizik', 'kimya:enerji-hiz', 'kimya:denge-elektro', 'kimya:organik',
+  'biyoloji:insan-fizyolojisi', 'biyoloji:gen-protein', 'biyoloji:bitki-komunite', 'felsefe:mantik']);
+
+const partsOf = (subject, group, topic) => {
+  if (TYT_SUBJECTS.has(subject)) return ['TYT'];
+  if (AYT_SUBJECTS.has(subject)) return ['AYT'];
+  if (TYT_ONLY_GROUPS.has(group)) return ['TYT'];
+  if (AYT_ONLY_GROUPS.has(group)) return ['AYT'];
+  const k = subject + ':' + topic;
+  if (TYT_ONLY_TOPICS.has(k)) return ['TYT'];
+  if (AYT_ONLY_TOPICS.has(k)) return ['AYT'];
+  return ['TYT', 'AYT'];
+};
+
+// { TYT: { ders: [grup…] }, AYT: { … } } — boş grup ve dersler atılır
+export const YKS_BY_PART = Object.fromEntries(['TYT', 'AYT'].map(part => [part, Object.fromEntries(
+  Object.entries(YKS_TOPIC_GROUPS).map(([subject, groups]) => [subject,
+    groups.map(gr => ({ group: gr.group, topics: gr.topics.filter(t => partsOf(subject, gr.group, t.value).includes(part)) })).filter(gr => gr.topics.length)])
+    .filter(([, groups]) => groups.length))]));

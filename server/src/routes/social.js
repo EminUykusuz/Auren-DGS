@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../db.js';
-import { PARTS, SUBJECTS, TOPICS, TOTAL_TOPICS, partOf } from '../exams.js';
+import { PARTS, PART_SUBJECTS, TOTAL_TOPICS, topicCount, partOf } from '../exams.js';
 import { weeklyPoints } from '../calc.js';
 import { requireAuth, requireFriend, resolveExam, validate, wrap } from '../security.js';
 import { masteryOf } from '../mastery.js';
@@ -37,13 +37,13 @@ async function stats(userId, ws, x, part) {
       FROM dbo.TrialExams WHERE UserId=@u AND ExamType=@x AND ExamPart=@p ORDER BY ExamDate DESC, Id DESC`, { u: userId, x, p: part }),
     query(`SELECT MAX(CAST(TotalNet AS float)) AS B, COUNT(*) AS C FROM dbo.TrialExams WHERE UserId=@u AND ExamType=@x AND ExamPart=@p`, { u: userId, x, p: part }),
     query(`SELECT SubjectKey, SUM(CASE WHEN Status='completed' THEN 1 ELSE 0 END) AS Done, SUM(CompletedQuestions) AS Solved
-      FROM dbo.SubjectProgress WHERE UserId=@u AND ExamType=@x GROUP BY SubjectKey`, { u: userId, x }),
+      FROM dbo.SubjectProgress WHERE UserId=@u AND ExamType=@x AND ExamPart=@p GROUP BY SubjectKey`, { u: userId, x, p: part }),
     query(`SELECT s.SectionKey, AVG(CAST(s.Net AS float)) AS Avg FROM dbo.TrialExamSections s JOIN dbo.TrialExams t ON t.Id=s.ExamId
       WHERE t.UserId=@u AND t.ExamType=@x AND t.ExamPart=@p GROUP BY s.SectionKey`, { u: userId, x, p: part }),
   ]);
   const round2 = n => Math.round(n * 100) / 100;
-  const subjects = Object.fromEntries(SUBJECTS[x].map(({ key }) => {
-    const p = prog.find(q => q.SubjectKey === key), total = TOPICS[x][key].length;
+  const subjects = Object.fromEntries(PART_SUBJECTS[x][part].map(({ key }) => {
+    const p = prog.find(q => q.SubjectKey === key), total = topicCount(x, part, key);
     return [key, { done: p?.Done ?? 0, total, solved: p?.Solved ?? 0, percent: Math.round(((p?.Done ?? 0) / total) * 100) }];
   }));
   const done = Object.values(subjects).reduce((s, v) => s + v.done, 0);
@@ -57,18 +57,18 @@ async function stats(userId, ws, x, part) {
     sections: partOf(x, part).sections.map(s => ({ key: s.key, label: s.label, max: s.max, avg: round2(secs.find(q => q.SectionKey === s.key)?.Avg ?? 0) })),
     trend: exams.map(e => ({ date: e.D, name: e.ExamName, net: e.N })).reverse(),
     subjects,
-    overallPercent: Math.round((done / TOTAL_TOPICS[x]) * 100),
+    overallPercent: Math.round((done / TOTAL_TOPICS[x][part]) * 100),
   };
 }
 
 // Konu güç analizi: yalnızca oturum sahibinin kendi verisi, seçili sınav türü
-r.get('/mastery', wrap(async (req, res) => {
-  const x = req.examType;
+r.get('/mastery', partQuery, resolvePart, wrap(async (req, res) => {
+  const x = req.examType, part = req.part;
   const agg = await query(`SELECT SubjectKey, TopicKey, COUNT(*) AS Sessions, COUNT(DISTINCT StudyDate) AS Days,
       SUM(QuestionsSolved) AS Solved, SUM(CorrectCount) AS Correct, SUM(WrongCount) AS Wrong, SUM(DurationMinutes) AS Minutes,
       CONVERT(char(10), MAX(StudyDate), 23) AS LastDate, DATEDIFF(day, MAX(StudyDate), CAST(GETDATE() AS date)) AS DaysSince
-    FROM dbo.StudySessions WHERE UserId=@u AND ExamType=@x GROUP BY SubjectKey, TopicKey`, { u: req.userId, x });
-  const prog = await query(`SELECT SubjectKey, TopicKey, Status, TargetQuestions FROM dbo.SubjectProgress WHERE UserId=@u AND ExamType=@x`, { u: req.userId, x });
+    FROM dbo.StudySessions WHERE UserId=@u AND ExamType=@x AND ExamPart=@p GROUP BY SubjectKey, TopicKey`, { u: req.userId, x, p: part });
+  const prog = await query(`SELECT SubjectKey, TopicKey, Status, TargetQuestions FROM dbo.SubjectProgress WHERE UserId=@u AND ExamType=@x AND ExamPart=@p`, { u: req.userId, x, p: part });
   const keys = new Map();
   for (const a of agg) keys.set(a.SubjectKey + ':' + a.TopicKey, { a });
   for (const p of prog) keys.set(p.SubjectKey + ':' + p.TopicKey, { ...keys.get(p.SubjectKey + ':' + p.TopicKey), p });
@@ -78,7 +78,7 @@ r.get('/mastery', wrap(async (req, res) => {
     return { subjectKey, topicKey, status: p?.Status ?? 'in_progress', sessions: a?.Sessions ?? 0, days: a?.Days ?? 0, solved: a?.Solved ?? 0,
       correct: a?.Correct ?? 0, wrong: a?.Wrong ?? 0, minutes: a?.Minutes ?? 0, lastDate: a?.LastDate ?? null, daysSince: a?.DaysSince ?? null, ...m };
   });
-  res.json({ examType: x, topics });
+  res.json({ examType: x, part, topics });
 }));
 
 r.get('/stats/me', partQuery, resolvePart, wrap(async (req, res) => res.json(await stats(req.userId, weekStart(), req.examType, req.part))));

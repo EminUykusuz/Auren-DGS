@@ -149,7 +149,7 @@ CREATE TABLE dbo.TrialExamErrors (
   Reason  VARCHAR(10) NOT NULL,
   Cnt     INT NOT NULL,
   CONSTRAINT CK_TEE_Subject CHECK (Subject IN ('matematik','turkce')),
-  CONSTRAINT CK_TEE_Reason CHECK (Reason IN ('dikkat','konu','sure','formul','diger')),
+  CONSTRAINT CK_TEE_Reason CHECK (Reason IN ('dikkat','islem','konu','sure','formul','diger')),
   CONSTRAINT CK_TEE_Cnt CHECK (Cnt BETWEEN 1 AND 50),
   CONSTRAINT UQ_TEE UNIQUE (ExamId, Subject, Reason)
 );
