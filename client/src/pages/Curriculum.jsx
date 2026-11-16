@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { useTheme } from '../theme.js';
 import { get } from '../lib/api.js';
 import { useExamCfg } from '../store.js';
+import PartTabs from '../components/PartTabs.jsx';
 import { Page, Item, Title, Bar } from '../components/ui.jsx';
 import SortTable from '../components/SortTable.jsx';
 
@@ -99,7 +100,7 @@ export default function Curriculum() {
 
   return (
     <Page>
-      <Title>Müfredat ve güç analizi</Title>
+      <Title right={<PartTabs />}>Müfredat ve güç analizi</Title>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Item className="card">

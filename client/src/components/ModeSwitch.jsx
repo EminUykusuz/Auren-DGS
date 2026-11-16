@@ -3,8 +3,9 @@ import { useExam } from '../store.js';
 // DGS ⇄ YKS mod seçici: iki seçenekli kayan "hap" (radiogroup). Tercih kalıcıdır (localStorage + profil).
 const MODES = [['DGS', 'DGS'], ['YKS', 'YKS']];
 
-export default function ModeSwitch({ className = '', compact = false }) {
-  const mode = useExam(s => s.mode), setMode = useExam(s => s.setMode);
+export default function ModeSwitch({ className = '', compact = false, local = false }) {
+  const mode = useExam(s => s.mode), setModeRaw = useExam(s => s.setMode);
+  const setMode = (m) => setModeRaw(m, { remote: !local });   // local: oturum yokken sunucuya yazma
   const idx = MODES.findIndex(([id]) => id === mode);
   const onKey = (e) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); setMode(MODES[(idx + 1) % MODES.length][0]); }

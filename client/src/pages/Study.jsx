@@ -5,10 +5,11 @@ import { useExamCfg } from '../store.js';
 import { firstTopic } from '../lib/topics.js';
 import { Page, Item, Title } from '../components/ui.jsx';
 import SortTable from '../components/SortTable.jsx';
+import PartTabs from '../components/PartTabs.jsx';
 
 
 export default function Study() {
-  const { mode, cfg, topicLabel, subjectLabel, q } = useExamCfg(); const G = cfg.curriculum; const first = cfg.subjects[0].key;
+  const { mode, part, cfg, topicLabel, subjectLabel, q } = useExamCfg(); const G = cfg.curriculum; const first = cfg.subjects[0].key;
   const [list, setList] = useState([]); const [err, setErr] = useState('');
   const [f, setF] = useState({ subjectKey: first, topicKey: firstTopic(G, first), durationMinutes: 60, questionsSolved: 0, correctCount: 0, wrongCount: 0, studyDate: today() });
   const load = () => get('/sessions' + q()).then(r => setList(r.sessions));
@@ -19,7 +20,7 @@ export default function Study() {
 
   const submit = async (e) => {
     e.preventDefault(); setErr('');
-    try { await post('/sessions', { ...f, examType: mode }); setF(p => ({ ...p, questionsSolved: 0, correctCount: 0, wrongCount: 0 })); load(); } catch (x) { setErr(x.message); }
+    try { await post('/sessions', { ...f, examType: mode, part }); setF(p => ({ ...p, questionsSolved: 0, correctCount: 0, wrongCount: 0 })); load(); } catch (x) { setErr(x.message); }
   };
 
   const cols = useMemo(() => [
@@ -36,7 +37,7 @@ export default function Study() {
 
   return (
     <Page>
-      <Title>Çalışma kaydı</Title>
+      <Title right={<PartTabs />}>Çalışma kaydı</Title>
       <div className="grid gap-4 xl:grid-cols-[380px_1fr] xl:items-start">
         <Item className="xl:sticky xl:top-4">
           <form onSubmit={submit} className="card space-y-3">

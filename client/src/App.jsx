@@ -22,7 +22,7 @@ export default function App() {
   if (!ready) return <div className="p-10 text-center text-slate-500" role="status">Yükleniyor…</div>;
   if (user && !config) return <div className="p-10 text-center text-sm text-red-300" role="alert">Sunucuya ulaşılamadı. <button className="underline" onClick={() => init()}>Tekrar dene</button></div>;
   if (!user) return (
-    <>{loc.pathname !== '/' && <Ambient />}
+    <><Ambient />
       <Routes>
         <Route path="/" element={<Suspense fallback={null}><Landing /></Suspense>} />
         <Route path="/giris" element={<Login />} />

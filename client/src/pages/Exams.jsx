@@ -65,19 +65,21 @@ export default function Exams() {
   // Bölüm (TYT ⇄ AYT) değişince form sıfırlanır
   useEffect(() => { setRes(blank(sections)); setReasons({}); }, [part]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setAns = (key, field) => v => setRes(p => ({ ...p, [key]: { ...p[key], [field]: v } }));
-  const bad = Object.fromEntries(sections.map(s => [s.key, res[s.key].correct + res[s.key].wrong > s.max]));
+  // Bölüm değişince ilk çizimde `res` henüz yeni bölümün anahtarlarını içermez: boş cevaplarla tamamlanır (çökmeyi önler)
+  const R = useMemo(() => ({ ...blank(sections), ...res }), [res, sections]);
+  const setAns = (key, field) => v => setRes(p => ({ ...p, [key]: { ...(p[key] ?? { correct: 0, wrong: 0 }), [field]: v } }));
+  const bad = Object.fromEntries(sections.map(s => [s.key, R[s.key].correct + R[s.key].wrong > s.max]));
   const anyBad = Object.values(bad).some(Boolean);
-  const nets = Object.fromEntries(sections.map(s => [s.key, net(res[s.key].correct, res[s.key].wrong)]));
+  const nets = Object.fromEntries(sections.map(s => [s.key, net(R[s.key].correct, R[s.key].wrong)]));
   const total = sections.reduce((s, x) => s + nets[x.key], 0);
-  const wrongTotal = sections.reduce((s, x) => s + res[x.key].wrong, 0);
+  const wrongTotal = sections.reduce((s, x) => s + R[x.key].wrong, 0);
 
   // Yanlış sayısı azaltılırsa fazla kalan neden kayıtları kırpılır
   useEffect(() => {
     setReasons(m => {
       const trim = (rs = {}, cap) => { let over = sumOf(rs) - cap; if (over <= 0) return rs; const out = { ...rs }; for (const r of [...REASONS].reverse()) { const take = Math.min(out[r.key] ?? 0, over); if (take) { out[r.key] -= take; over -= take; } if (!over) break; } return out; };
       let changed = false; const next = {};
-      for (const s of sections) { const t = trim(m[s.key], res[s.key]?.wrong ?? 0); if (t !== m[s.key]) changed = true; next[s.key] = t; }
+      for (const s of sections) { const t = trim(m[s.key], R[s.key]?.wrong ?? 0); if (t !== m[s.key]) changed = true; next[s.key] = t; }
       return changed ? next : m;
     });
   }, [res]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -85,7 +87,7 @@ export default function Exams() {
   const submit = async (e) => {
     e.preventDefault(); setErr('');
     try {
-      await post('/exams', { examType: mode, part, ...meta, results: res, errors: toList(reasons) });
+      await post('/exams', { examType: mode, part, ...meta, results: R, errors: toList(reasons) });
       setMeta(p => ({ ...p, examName: '' })); setRes(blank(sections)); setReasons({}); load();
     } catch (x) { setErr(x.message); }
   };
@@ -131,17 +133,17 @@ export default function Exams() {
                   <div className="mb-3 flex items-center justify-between gap-2"><span className="text-sm font-medium text-slate-100"><span aria-hidden="true" className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }} />{s.label} <span className="text-xs text-slate-500">/ {s.max}</span></span>
                     <span className="num text-lg font-semibold text-accent">{fmt(nets[s.key])}</span></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field id={s.key + 'c'} label="Doğru" max={s.max} value={res[s.key].correct} onChange={setAns(s.key, 'correct')} />
-                    <Field id={s.key + 'w'} label="Yanlış" max={s.max} value={res[s.key].wrong} onChange={setAns(s.key, 'wrong')} />
+                    <Field id={s.key + 'c'} label="Doğru" max={s.max} value={R[s.key].correct} onChange={setAns(s.key, 'correct')} />
+                    <Field id={s.key + 'w'} label="Yanlış" max={s.max} value={R[s.key].wrong} onChange={setAns(s.key, 'wrong')} />
                   </div>
                   {bad[s.key] && <p className="mt-2 text-xs text-red-300">Doğru + yanlış en fazla {s.max} olabilir</p>}
                 </div>))}
             </div>
             {wrongTotal > 0 && (
-              <details className="group rounded-3xl border border-white/10 bg-white/[0.02] p-4">
+              <details open className="group rounded-3xl border border-white/10 bg-white/[0.02] p-4">
                 <summary className="cursor-pointer text-sm font-medium text-slate-100">Neden yanlış yaptım? <span className="text-xs font-normal text-slate-500">(isteğe bağlı)</span></summary>
                 <div className="mt-3 space-y-3">
-                  {sections.filter(s => res[s.key].wrong > 0).map(s => <ReasonEditor key={s.key} title={s.label} wrong={res[s.key].wrong} value={reasons[s.key] ?? {}} onChange={v => setReasons(m => ({ ...m, [s.key]: v }))} />)}
+                  {sections.filter(s => R[s.key].wrong > 0).map(s => <ReasonEditor key={s.key} title={s.label} wrong={R[s.key].wrong} value={reasons[s.key] ?? {}} onChange={v => setReasons(m => ({ ...m, [s.key]: v }))} />)}
                 </div>
               </details>)}
             <div className="flex items-center justify-between">

@@ -17,7 +17,7 @@ const clampInt = (v, lo, hi) => Math.min(hi, Math.max(lo, parseInt(v, 10) || lo)
 
 // Süre duvar saatine göre tutulur (endsAt): sekme arka planda olsa da, sayfa yenilense de doğru kalır.
 export default function Pomodoro() {
-  const { mode, cfg: exam } = useExamCfg(); const G = exam.curriculum;
+  const { mode, part, cfg: exam } = useExamCfg(); const G = exam.curriculum;
   const [cfg, setCfg] = useState(() => { const c = load(SK, DEF); return { ...c, ...validPick(G, c.subjectKey, c.topicKey) }; });
   const [run, setRun] = useState(() => { const r = load(RK, { phase: 'work', endsAt: null, remaining: null, cycle: 0 }); return { ...r, remaining: r.remaining ?? load(SK, DEF).work * 60000 }; });
   const [now, setNow] = useState(Date.now());
@@ -36,10 +36,10 @@ export default function Pomodoro() {
   const record = useCallback(async (minutes) => {
     if (minutes < 1) return;
     try {
-      await post('/sessions', { examType: mode, subjectKey: cfg.subjectKey, topicKey: cfg.topicKey, durationMinutes: Math.min(minutes, 1440), questionsSolved: 0, correctCount: 0, wrongCount: 0, studyDate: today() });
+      await post('/sessions', { examType: mode, part, subjectKey: cfg.subjectKey, topicKey: cfg.topicKey, durationMinutes: Math.min(minutes, 1440), questionsSolved: 0, correctCount: 0, wrongCount: 0, studyDate: today() });
       setMsg(`${minutes} dk odak oturumu kaydedildi ✓`);
     } catch (e) { setMsg('Oturum kaydedilemedi: ' + e.message); }
-  }, [cfg.subjectKey, cfg.topicKey, mode]);
+  }, [cfg.subjectKey, cfg.topicKey, mode, part]);
 
   // fazı bitir: kayıt + sonraki faza geç. minutes: kaydedilecek odak dakikası (erken atlamada kısmi)
   const advance = useCallback((minutes, startNext) => {
@@ -92,7 +92,7 @@ export default function Pomodoro() {
       <svg viewBox="0 0 260 260" className="h-full w-full -rotate-90" aria-hidden="true">
         <circle cx="130" cy="130" r={R} fill="none" stroke="rgb(var(--fg) / .08)" strokeWidth="10" />
         <circle cx="130" cy="130" r={R} fill="none" stroke={run.phase === 'work' ? 'rgb(var(--accent))' : 'rgb(var(--cyan2))'} strokeWidth="10" strokeLinecap="round"
-          strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, Math.max(0, pct)))} style={{ transition: running ? 'stroke-dashoffset 1s linear' : 'none' }} />
+          strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, Math.max(0, pct)))} />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400"><PhaseIcon size={13} />{label}</div>

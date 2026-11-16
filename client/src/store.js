@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { get, post, put } from './lib/api.js';
 
@@ -28,11 +29,14 @@ export const useExam = create((set, getState) => ({
 // Geçerli moda ait yapılandırma ve sorgu yardımcıları
 export function useExamCfg() {
   const mode = useExam(s => s.mode), config = useExam(s => s.config), part = useExam(s => s.parts[s.mode]);
-  const cfg = config.types.find(t => t.id === mode);
-  const partDef = cfg.parts.find(p => p.id === part) ?? cfg.parts[0];
-  const topicLabel = (subject, key) => cfg.curriculum[subject]?.flatMap(g => g.topics).find(t => t.value === key)?.label ?? key;
-  const subjectLabel = (key) => cfg.subjects.find(s => s.key === key)?.label ?? cfg.parts.flatMap(p => p.sections).find(s => s.key === key)?.label ?? key;
-  return { mode, cfg, part: partDef.id, partDef, topicLabel, subjectLabel, q: (extra = {}) => '?' + new URLSearchParams({ examType: mode, ...extra }) };
+  const base = config.types.find(t => t.id === mode);
+  const partDef = base.parts.find(p => p.id === part) ?? base.parts[0];
+  // cfg.subjects / cfg.curriculum seçili bölümün (DGS | TYT | AYT) ders ve konularını verir
+  // Kararlı referans: cfg'ye bağlı useMemo'lar her render'da yeniden hesaplanmasın
+  const cfg = useMemo(() => ({ ...base, subjects: partDef.subjects, curriculum: partDef.curriculum }), [base, partDef]);
+  const topicLabel = (subject, key) => { for (const p of base.parts) { const t = p.curriculum[subject]?.flatMap(g => g.topics).find(t => t.value === key); if (t) return t.label; } return key; };
+  const subjectLabel = (key) => base.parts.flatMap(p => p.subjects).find(s => s.key === key)?.label ?? base.parts.flatMap(p => p.sections).find(s => s.key === key)?.label ?? key;
+  return { mode, cfg, part: partDef.id, partDef, topicLabel, subjectLabel, q: (extra = {}) => '?' + new URLSearchParams({ examType: mode, part: partDef.id, ...extra }) };
 }
 
 export const useAuth = create((set) => ({
@@ -43,10 +47,10 @@ export const useAuth = create((set) => ({
   },
   patchUser(patch) { set(st => ({ user: st.user ? { ...st.user, ...patch } : st.user })); },
   async login(identifier, password) { const { user } = await post('/auth/login', { identifier, password }); useExam.getState().adopt(user.examMode); set({ user }); },
-  async register(username, email, password) {
-    const { user } = await post('/auth/register', { username, email, password });
-    // Yeni hesap: tarayıcıda seçili modu sunucuya yaz (landing'de seçilmiş olabilir)
-    const m = useExam.getState().mode; if (m !== 'DGS') await put('/profile/mode', { examMode: m }).catch(() => {});
+  async register(username, email, password, examTrack, examMode) {
+    // Kayıtta seçilen sınav doğrudan hesaba yazılır; panel bu moda göre açılır
+    const { user } = await post('/auth/register', { username, email, password, examTrack, examMode });
+    useExam.getState().adopt(user.examMode);
     set({ user });
   },
   async logout() {

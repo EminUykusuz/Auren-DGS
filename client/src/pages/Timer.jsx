@@ -6,6 +6,7 @@ import { validPick, firstTopic } from '../lib/topics.js';
 import clsx from 'clsx';
 import { Page, Item, Title } from '../components/ui.jsx';
 import Pomodoro from '../components/Pomodoro.jsx';
+import PartTabs from '../components/PartTabs.jsx';
 
 const KEY = 'dgs_timer_v1';
 const pad = n => String(n).padStart(2, '0');
@@ -17,7 +18,7 @@ function Stopwatch() {
   const [acc, setAcc] = useState(saved.current?.acc ?? 0);            // birikmiş ms
   const [since, setSince] = useState(saved.current?.since ?? null);   // çalışıyorsa başlangıç zamanı
   const [now, setNow] = useState(Date.now());
-  const { mode, cfg } = useExamCfg(); const G = cfg.curriculum;
+  const { mode, part, cfg } = useExamCfg(); const G = cfg.curriculum;
   const init = useRef(validPick(G, saved.current?.subjectKey, saved.current?.topicKey));
   const [subjectKey, setSubject] = useState(init.current.subjectKey);
   const [topicKey, setTopic] = useState(init.current.topicKey);
@@ -37,7 +38,7 @@ function Stopwatch() {
     setMsg('');
     if (minutes < 1) return setMsg('Kaydetmek için en az 1 dakika çalışmalısın.');
     try {
-      await post('/sessions', { examType: mode, subjectKey, topicKey, durationMinutes: Math.min(minutes, 1440), ...q, studyDate: today() });
+      await post('/sessions', { examType: mode, part, subjectKey, topicKey, durationMinutes: Math.min(minutes, 1440), ...q, studyDate: today() });
       setAcc(0); setSince(null); setQ({ questionsSolved: 0, correctCount: 0, wrongCount: 0 }); setMsg(`${minutes} dk kaydedildi ✓`);
     } catch (e) { setMsg(e.message); }
   };
@@ -74,6 +75,7 @@ export default function Timer() {
   const pick = m => { setMode(m); localStorage.setItem('dgs_timer_mode', m); };
   return (
     <Page>
+      <div className="mb-3 flex justify-end"><PartTabs /></div>
       <Title right={<div role="tablist" aria-label="Zamanlayıcı türü" className="glass-pill flex p-1">{[['pomodoro', 'Pomodoro & Odak'], ['kronometre', 'Kronometre']].map(([k, l]) => (
         <button key={k} role="tab" aria-selected={mode === k} onClick={() => pick(k)} className={clsx('rounded-full px-4 py-1.5 text-sm transition', mode === k ? 'bg-white/15 text-white' : 'text-slate-400')}>{l}</button>))}</div>}>Zamanlayıcı</Title>
       {mode === 'pomodoro' ? <Pomodoro /> : <Stopwatch />}

@@ -1,6 +1,7 @@
 // Yanlış nedenleri (sunucudaki REASONS ile aynı anahtarlar)
 export const REASONS = [
   { key: 'dikkat', label: 'Dikkat Hatası', color: '#F59E0B' },
+  { key: 'islem', label: 'İşlem Hatası', color: '#F472B6' },
   { key: 'konu', label: 'Konu Eksiği', color: '#06B6D4' },
   { key: 'sure', label: 'Süre Yetmedi', color: '#818CF8' },
   { key: 'formul', label: 'Formül Unuttum', color: '#10B981' },

@@ -59,7 +59,7 @@ function Item({ to, label, Icon, collapsed, badge }) {
 }
 
 export function Shell() {
-  const { user, logout } = useAuth(); const { theme, toggleMode } = useTheme(); const loc = useLocation(); const mode = useExam(s => s.mode);
+  const { user, logout } = useAuth(); const { theme, toggleMode } = useTheme(); const loc = useLocation(); const mode = useExam(s => s.mode); const part = useExam(s => s.parts[s.mode]);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('dgs_nav') !== 'open');   // varsayılan: simge dock'u
   const toggle = () => setCollapsed(c => { localStorage.setItem('dgs_nav', c ? 'open' : 'closed'); return !c; });
   const [pending, setPending] = useState(0);
@@ -108,9 +108,9 @@ export function Shell() {
       <main className={clsx('mx-auto max-w-[1680px] px-4 pb-28 pt-6 transition-[padding] duration-300 md:pb-10 md:pr-6', collapsed ? 'md:pl-[6.5rem]' : 'md:pl-[15.5rem]')}>
         <div className="sticky top-3 z-20 -mt-1 mb-4 flex items-center justify-between gap-3">
           <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">Auren <span className="text-accent">{mode}</span></span><span aria-hidden="true">·</span><span>{mode === 'DGS' ? 'Dikey Geçiş Sınavı' : 'TYT · AYT'}</span></div>
-          <ModeSwitch className="ml-auto" />
+          {user.examTrack === 'BOTH' ? <ModeSwitch className="ml-auto" /> : <span className="badge ml-auto bg-accent/15 text-accent">{mode} hesabı</span>}
         </div>
-        <div key={seg + mode} className="fade-in"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>
+        <div key={seg + mode + part} className="fade-in"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>
         <Credit />
       </main>
     </div>

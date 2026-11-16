@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2, UserRound } from 'lucide-react';
+import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2, UserRound, Layers } from 'lucide-react';
 import clsx from 'clsx';
 import { get, put, post } from '../lib/api.js';
 import { useTheme, THEMES, BACKGROUNDS, fileToBg } from '../theme.js';
@@ -7,6 +7,7 @@ import { Page, Item, Title } from '../components/ui.jsx';
 import { useExam, useAuth } from '../store.js';
 import Avatar, { AVATARS } from '../components/Avatar.jsx';
 import SupportCard from '../components/SupportCard.jsx';
+import TrackPicker from '../components/TrackPicker.jsx';
 
 function Switch({ checked, onChange, label, hint }) {
   const id = useId();
@@ -70,6 +71,23 @@ function Appearance() {
         <Switch checked={perf} onChange={setPerf} label="Performans modu (efektleri azalt)" hint="Bulanıklık, parıltı ve animasyonları kapatır; eski cihazlarda kaydırma akıcı olur" />
       </div>
       <p className="mt-3 text-xs text-slate-500">Tercihlerin bu tarayıcıda saklanır.</p>
+    </Item>
+  );
+}
+
+function Track() {
+  const user = useAuth(x => x.user); const patchUser = useAuth(x => x.patchUser); const [err, setErr] = useState('');
+  const change = async (t) => {
+    setErr('');
+    try { const r = await put('/profile/track', { examTrack: t }); patchUser({ examTrack: r.examTrack, examMode: r.examMode }); useExam.getState().adopt(r.examMode); }
+    catch (x) { setErr(x.message); }
+  };
+  return (
+    <Item className="card">
+      <div className="stat-label mb-1 flex items-center gap-2"><Layers size={13} /> Hazırlandığın sınav</div>
+      <p className="mb-4 text-xs text-slate-500">Panel, seçtiğin sınava göre şekillenir. Hibrit hesapta üst çubuktan DGS ve YKS arasında geçersin; veriler ayrı kalır.</p>
+      <TrackPicker value={user.examTrack ?? 'BOTH'} onChange={change} id="settings-track" />
+      {err && <p role="alert" className="mt-3 text-xs text-red-300">{err}</p>}
     </Item>
   );
 }
@@ -176,7 +194,7 @@ export default function Settings() {
     <Page>
       <Title>Ayarlar</Title>
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-        <div className="space-y-4"><Profile /><Appearance /><Target /></div>
+        <div className="space-y-4"><Profile /><Track /><Appearance /><Target /></div>
         <div className="space-y-4"><SupportCard /><Feedback /></div>
       </div>
     </Page>
