@@ -39,14 +39,16 @@ function Stop-Api {
 function Start-Api {
   $svc = Get-Service -Name $Service -ErrorAction SilentlyContinue
   if ($svc) { Start-Service $Service; return }
-  if (-not (Get-ScheduledTask -TaskName $Service -ErrorAction SilentlyContinue)) {
-    Write-Host "Zamanlanmış görev '$Service' yok, oluşturuluyor (açılışta otomatik başlar)."
-    $node = (Get-Command node -ErrorAction Stop).Source
-    $act  = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c `"$node`" src\index.js >> `"$log\api.log`" 2>&1" -WorkingDirectory $srv
-    $trg  = New-ScheduledTaskTrigger -AtStartup
-    $set  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
-    Register-ScheduledTask -TaskName $Service -Action $act -Trigger $trg -Settings $set -User 'SYSTEM' -RunLevel Highest | Out-Null
-  }
+  Write-Host "Zamanlanmış görev '$Service' güncelleniyor (NETWORK SERVICE hesabıyla)."
+  $node = (Get-Command node -ErrorAction Stop).Source
+  $launcher = Join-Path $AppDir 'start-api.cmd'
+  "@echo off`r`ncd /d `"$srv`"`r`n`"$node`" src\index.js >> `"$log\api.log`" 2>&1`r`n" |
+    Set-Content -LiteralPath $launcher -Encoding ASCII
+  $act = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/d /c `"$launcher`"" -WorkingDirectory $srv
+  $trg = New-ScheduledTaskTrigger -AtStartup
+  $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+  $principal = New-ScheduledTaskPrincipal -UserId 'NT AUTHORITY\NETWORK SERVICE' -LogonType ServiceAccount -RunLevel Highest
+  Register-ScheduledTask -TaskName $Service -Action $act -Trigger $trg -Settings $set -Principal $principal -Force | Out-Null
   Start-ScheduledTask -TaskName $Service
 }
 function Wait-Healthy {
