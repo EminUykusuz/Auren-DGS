@@ -1,12 +1,8 @@
 name: Deploy
 
-# main'e her push: önce derleme/sözdizimi kontrolü, sonra API'nin VDS'te güncellenmesi.
-# Her şey VDS'te: arayüz bulutta derlenip artifact olarak VDS'e iner, API aynı portta onu servis eder.
-# Güvenlik: self-hosted runner kullanıldığı için tetikleyici yalnızca push'tur (pull_request yok → fork kodu VDS'te çalışmaz).
+# İsteğe bağlı manuel Actions dağıtımı. Normal yayın için VDS'te YAYINLA.bat kullanılır.
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

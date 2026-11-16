@@ -1,19 +1,21 @@
 # Otomatik dağıtım
 
-`main` dalına her push otomatik dağıtım başlatır.
+Normal yayın için VDS'te `YAYINLA.bat` dosyasını yönetici olarak çalıştır. Betik GitHub `main` dalının geçici bir kopyasını indirir, arayüzü derler, sunucuya dağıtır, migration'ları çalıştırır ve API sağlık kontrolünü yapar. Push ile otomatik dağıtım kapalıdır; Actions workflow'u yalnızca elle tetiklenebilir.
 
 Her şey tek sunucuda (VDS): API ve arayüz aynı portta, aynı Express süreciyle servis edilir.
 
 1. `check` işi (bulut): arayüzü derler (`client/dist` artifact olur), sunucu dosyalarının sözdizimini denetler. Geçmezse VDS'e dokunulmaz.
 2. `deploy-api` işi (VDS'teki self-hosted runner): artifact'ı indirir, `deploy/deploy.ps1`'i çalıştırır. VDS'te arayüz derleme araçlarına gerek yoktur.
 
+`YAYINLA.bat`, `origin/main`'i ayrı ve geçici bir worktree'de hazırlar; `server` klasöründe yerel değişiklik görürse dosyaları ezmemek için durur. `server\.env`, veritabanı ve mevcut Caddy/DNS ayarlarına dokunmaz.
+
 ## VDS'te bir kez yapılacaklar (Windows)
 
-1. Workflow, deploy işi başlamadan önce self-hosted runner'a **Node 22** kurar; VDS'e ayrıca sistem geneline kurman gerekmez.
+1. `YAYINLA.bat`, **Node 22**'yi PATH'te veya Actions runner önbelleğinde arar. İkisi de yoksa VDS'e Node 22 kur.
 2. **Uygulama klasörü**: workflow hedefi `C:\Auren-DGS`; `server\.env` burada bulunmalı. Dosyayı elle oluştur (`server/.env.example`'dan). Önemlisi: `NODE_ENV=production`, `JWT_SECRET`, DB bilgileri, `PORT`, `CORS_ORIGINS=https://aurenstudy.com.tr`, `APP_URL=https://aurenstudy.com.tr`. Site HTTPS değilse `COOKIE_SECURE=false` gerekir (HTTPS önerilir: önüne IIS/Caddy/nginx ile SSL koy). Deploy `.env`'e dokunmaz, git'e de girmez.
-3. **Runner kur**: GitHub'da repo → *Settings → Actions → Runners → New self-hosted runner → Windows*. Verilen komutları VDS'te PowerShell (yönetici) ile çalıştır. Etiketler varsayılan (`self-hosted`, `windows`) kalsın. Sonunda **hizmet olarak** kur: `.\config.cmd ... --runasservice` (VDS yeniden başlayınca runner da açılır). Runner hesabı Hizmet/Zamanlanmış Görev oluşturabilmeli (yönetici veya SYSTEM).
+3. GitHub Actions'tan manuel deploy kullanacaksan **self-hosted runner** kur: GitHub'da repo → *Settings → Actions → Runners → New self-hosted runner → Windows*. Normal yayın için `YAYINLA.bat` runner gerektirmez.
 4. **API süreci**: `AurenAPI` adlı bir Windows hizmeti (örn. NSSM ile) varsa deploy onu yeniden başlatır. Yoksa ilk deploy `AurenAPI` adlı, açılışta başlayan bir zamanlanmış görev oluşturur. Eskiden `BASLAT.bat` ile açtığın pencereyi kapat ki 5050 portu çakışmasın (betik, portu tutan eski node sürecini de kapatır).
-5. **Repo ayarları** (isteğe bağlı): *Settings → Secrets and variables → Actions → Variables* altında `AUREN_PORT` (varsayılan `5050`). Uygulama klasörü workflow'da `C:\Auren-DGS` olarak ayarlanmıştır.
+5. GitHub Actions'tan manuel deploy kullanacaksan isteğe bağlı olarak `AUREN_PORT` değişkenini ayarla (varsayılan `5050`). `YAYINLA.bat` `C:\Auren-DGS` klasörünü ve `5050` portunu kullanır.
 6. *Settings → Environments → New environment* → `production` oluştur (istersen "Required reviewers" ekleyip onaylı deploy yap).
 
 ## Deploy ne yapar
@@ -25,8 +27,8 @@ Elle tetikleme: *Actions → Deploy → Run workflow*.
 
 ## Güvenlik notu
 
-Self-hosted runner repo kodunu VDS'te çalıştırır. Bu yüzden workflow yalnızca `push` ile tetiklenir, `pull_request` yoktur; repo'ya yazma yetkisini yalnızca güvendiğin kişilere ver.
+Self-hosted runner repo kodunu VDS'te çalıştırır. Workflow push ile otomatik çalışmaz; yalnızca Actions sayfasından elle tetiklenir. Bunu kullanıyorsan repo'ya yazma yetkisini yalnızca güvendiğin kişilere ver.
 
 ## İletişim e-postası (yasal sayfalar)
 
-Gizlilik ve KVKK sayfalarında başvuru adresi görünmesi için arayüz derlenirken `VITE_CONTACT_EMAIL` tanımlı olmalı: GitHub → *Settings → Secrets and variables → Actions → Variables* altına `VITE_CONTACT_EMAIL` ekle (workflow bunu derlemeye geçirir). Boşsa sayfalar uygulama içi geri bildirim formuna yönlendirir.
+Gizlilik ve KVKK sayfalarında başvuru adresi görünmesi için `VITE_CONTACT_EMAIL` tanımla. `YAYINLA.bat` kullanıyorsan bunu `client/.env.production` içine ekle; Actions'tan manuel deploy ediyorsan GitHub Actions Variables olarak ayarla. Boşsa sayfalar uygulama içi geri bildirim formuna yönlendirir.
