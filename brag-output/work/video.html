@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<style>
+  html { font-size: 24px !important; }
+  html, body { margin: 0; background: #090A0F; }
+  body { font-family: Inter, system-ui, sans-serif; overflow: hidden; width: 1080px; height: 1920px; }
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #090A0F; color: #cbd5e1; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .abs { position: absolute; }
+  i[data-ic] { display: inline-flex; } i[data-ic] svg { width: 1em; height: 1em; }
+  .w { display: inline-block; margin-right: .27em; will-change: transform, opacity; } .w:last-child { margin-right: 0; }
+  .hl { background: linear-gradient(100deg, #10B981 10%, #06B6D4 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .big { font-weight: 650; letter-spacing: -0.03em; line-height: 1.04; color: #f1f5f9; }
+  #bgglow, #endglow { position: absolute; border-radius: 50%; pointer-events: none; }
+  .ui { position: absolute; left: 50px; right: 130px; }   /* sağ 130 px: platform butonları için boş */
+  .cap { position: absolute; left: 60px; right: 70px; top: 280px; }
+  .cap .eb { font-size: 22px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #10B981; }
+  .cap h2 { margin: 12px 0 0; font-size: 70px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.04; color: #f8fafc; }
+  .sub { position: absolute; inset: 0; display: none; }
+  .foot { position: absolute; left: 0; right: 0; top: 1478px; text-align: center; font-size: 19px; color: #64748b; }
+  .dots { position: absolute; left: 0; right: 0; top: 1420px; display: flex; justify-content: center; gap: 12px; }
+  .dots span { height: 8px; width: 8px; border-radius: 99px; background: rgba(255,255,255,.18); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bgglow" style="left:-260px;top:300px;width:1600px;height:1600px;background:radial-gradient(closest-side, rgba(16,185,129,.20), rgba(6,182,212,.07) 55%, transparent);opacity:0"></div>
+
+  <!-- ===== SAHNE 1: gece masası (0–5 sn) ===== -->
+  <section class="scene" id="s1">
+    <div class="abs" style="inset:0;background:linear-gradient(180deg,#05060a 0%,#0a0c14 55%,#07080d 100%)"></div>
+    <svg class="abs" style="left:0;top:0" width="1080" height="1920" viewBox="0 0 1080 1920">
+      <defs>
+        <radialGradient id="lampGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FBBF24" stop-opacity=".6"/><stop offset="1" stop-color="#FBBF24" stop-opacity="0"/></radialGradient>
+        <linearGradient id="cone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FCD34D" stop-opacity=".46"/><stop offset=".7" stop-color="#F59E0B" stop-opacity=".12"/><stop offset="1" stop-color="#F59E0B" stop-opacity="0"/></linearGradient>
+        <linearGradient id="rim" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#FBBF24"/><stop offset=".5" stop-color="#FBBF24" stop-opacity=".15"/><stop offset="1" stop-color="#FBBF24" stop-opacity="0"/></linearGradient>
+        <linearGradient id="deskg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14161f"/><stop offset="1" stop-color="#07080c"/></linearGradient>
+        <filter id="soft"><feGaussianBlur stdDeviation="14"/></filter>
+      </defs>
+      <circle id="lampHalo" cx="775" cy="1115" r="520" fill="url(#lampGlow)"/>
+      <polygon id="cone" points="735,1092 806,1076 960,1445 270,1445" fill="url(#cone)" filter="url(#soft)"/>
+      <!-- masa -->
+      <rect x="0" y="1420" width="1080" height="500" fill="url(#deskg)"/>
+      <line x1="0" y1="1420" x2="1080" y2="1420" stroke="#FBBF24" stroke-opacity=".22" stroke-width="2"/>
+      <!-- defter -->
+      <polygon points="400,1452 770,1452 820,1580 350,1580" fill="#e9e2cf" fill-opacity=".9"/>
+      <polygon points="400,1452 770,1452 775,1462 395,1462" fill="#fff" fill-opacity=".35"/>
+      <g id="lines" stroke="#2b3550" stroke-width="3" stroke-linecap="round" fill="none" opacity=".75">
+        <path class="ln" d="M430 1488 H735"/><path class="ln" d="M424 1514 H742"/><path class="ln" d="M416 1540 H752"/><path class="ln" d="M410 1562 H700"/>
+      </g>
+      <line id="pen" x1="640" y1="1500" x2="700" y2="1440" stroke="#0b0c12" stroke-width="9" stroke-linecap="round"/>
+      <!-- öğrenci (arkadan, yarı silüet) -->
+      <g id="student">
+        <path d="M150 1430 C150 1330 235 1286 360 1276 C485 1286 570 1330 570 1430 Z" fill="#06070b"/>
+        <path d="M570 1430 C570 1330 485 1286 360 1276" fill="none" stroke="url(#rim)" stroke-width="5" opacity=".9"/>
+        <g id="head" style="transform-origin:360px 1275px">
+          <rect x="332" y="1240" width="56" height="50" rx="20" fill="#06070b"/>
+          <circle cx="360" cy="1185" r="82" fill="#06070b"/>
+          <path d="M360 1103 A82 82 0 0 1 442 1185" fill="none" stroke="url(#rim)" stroke-width="5"/>
+          <circle cx="332" cy="1108" r="30" fill="#06070b"/>
+        </g>
+      </g>
+      <!-- lamba -->
+      <g id="lamp">
+        <ellipse cx="868" cy="1420" rx="76" ry="15" fill="#10121a"/>
+        <path d="M868 1414 L842 1236 L792 1092" fill="none" stroke="#1b1e2a" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M712 1088 L812 1066 L840 1116 L734 1140 Z" fill="#1d2030"/>
+        <path d="M734 1140 L840 1116" stroke="#FCD34D" stroke-width="5" stroke-linecap="round"/>
+      </g>
+      <g id="dust" fill="#FDE68A"></g>
+    </svg>
+    <div id="clock" class="abs num" style="left:0;right:0;top:300px;text-align:center;font-size:150px;font-weight:400;letter-spacing:-0.04em;color:#e2e8f0;opacity:.0">02<span id="colon">:</span>47</div>
+    <div class="abs" style="left:0;right:0;top:500px;text-align:center;font-size:21px;letter-spacing:.3em;color:#64748b;text-transform:uppercase" id="clockLabel">Gece yarısı sonrası</div>
+    <div id="t1" class="abs big" style="left:90px;right:90px;top:650px;font-size:80px">
+      <div id="t1a" data-split="Her gün çalışıyorsun."></div>
+      <div id="t1b" style="margin-top:34px"><div data-split="Peki gerçekten"></div><div data-split="*ilerliyor* musun?"></div></div>
+    </div>
+    <div id="s1fade" class="abs" style="inset:0;background:#000;opacity:0"></div>
+  </section>
+
+  <!-- ===== SAHNE 2: logo + vaat (5–12 sn) ===== -->
+  <section class="scene" id="s2">
+    <div id="logoGroup" class="abs" style="left:0;right:0;top:600px;height:640px;display:flex;flex-direction:column;align-items:center;transform-origin:50% 0">
+      <svg id="logo2" width="300" height="300" viewBox="0 0 64 64" style="overflow:visible">
+        <rect id="tile2" x="1" y="1" width="62" height="62" rx="16" fill="#0d0f16" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+        <path id="dpath2" d="M14 44V20h13a12 12 0 0 1 0 24H14Zm9-8h4a4 4 0 0 0 0-8h-4v8Z" fill="#10B981" fill-opacity="0" stroke="#34d399" stroke-width="1.1" stroke-linejoin="round"/>
+        <circle id="dot2" cx="46" cy="32" r="6" fill="#06B6D4"/>
+        <circle id="ring2" cx="46" cy="32" r="6" fill="none" stroke="#06B6D4" stroke-width="1"/>
+      </svg>
+      <div id="wm2" style="margin-top:44px;font-size:132px;font-weight:700;letter-spacing:-0.045em;color:#f8fafc;line-height:1;display:flex"></div>
+      <div id="study2" style="margin-top:16px;font-size:30px;font-weight:600;letter-spacing:.62em;color:#10B981;padding-left:.62em">STUDY</div>
+    </div>
+    <div id="tag" class="abs" style="left:110px;right:110px;top:640px">
+      <div class="tl" style="display:flex;align-items:center;gap:30px;margin-bottom:62px"><span class="ico" style="width:92px;height:92px;border-radius:30px;background:rgba(16,185,129,.14);color:#10B981;font-size:46px;display:grid;place-items:center"><i data-ic="Clock"></i></span><span class="big" style="font-size:78px" data-split="Çalışmanı *takip* et."></span></div>
+      <div class="tl" style="display:flex;align-items:center;gap:30px;margin-bottom:62px"><span class="ico" style="width:92px;height:92px;border-radius:30px;background:rgba(6,182,212,.14);color:#06B6D4;font-size:46px;display:grid;place-items:center"><i data-ic="Target"></i></span><span class="big" style="font-size:78px" data-split="Eksiklerini *keşfet.*"></span></div>
+      <div class="tl" style="display:flex;align-items:center;gap:30px"><span class="ico" style="width:92px;height:92px;border-radius:30px;background:rgba(16,185,129,.14);color:#10B981;font-size:46px;display:grid;place-items:center"><i data-ic="TrendingUp"></i></span><span class="big" style="font-size:78px" data-split="Gelişimini *gör.*"></span></div>
+    </div>
+  </section>
+
+  <!-- ===== SAHNE 3: gerçek arayüz bileşenleri (12–22 sn) ===== -->
+  <section class="scene" id="s3">
+    <!-- 1: Günlük çalışma kaydı -->
+    <div class="sub" id="f1">
+      <div class="cap"><div class="eb">01 · Çalışma kaydı</div><h2>Her günün<br>kaydı tek yerde.</h2></div>
+      <div class="ui" style="top:600px">
+        <div class="card" id="f1stat">
+          <div class="flex items-center justify-between"><div class="stat-label">Bu hafta</div><i data-ic="Flame" class="text-accent" style="font-size:16px"></i></div>
+          <div class="stat-value mt-2"><span id="f1h">0</span> sa</div>
+          <div class="mt-1 text-xs text-slate-400"><span id="f1q">0</span> soru</div>
+        </div>
+        <div class="card mt-4" id="f1tab">
+          <div class="mb-3 flex items-baseline justify-between"><div class="stat-label">Geçmiş</div><div class="num text-xs text-slate-500" id="f1cnt">4 kayıt · 3,3 saat</div></div>
+          <table class="w-full text-sm"><thead><tr>
+            <th class="th px-3 text-left first:pl-1">Tarih</th><th class="th px-3 text-left">Konu</th><th class="th px-3 text-right">Süre</th><th class="th px-3 text-right last:pr-1">Net</th></tr></thead>
+            <tbody id="f1rows"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2: Deneme net analizi -->
+    <div class="sub" id="f2">
+      <div class="cap"><div class="eb">02 · Deneme analizi</div><h2>Netlerin nereye<br>gidiyor, gör.</h2></div>
+      <div class="ui" style="top:600px">
+        <div class="grid grid-cols-2 gap-4" id="f2stats">
+          <div class="card"><div class="flex items-center justify-between"><div class="stat-label">Ortalama net</div><i data-ic="Target" class="text-cyan2" style="font-size:16px"></i></div><div class="stat-value mt-2" id="f2avg">0</div><div class="mt-1 text-xs text-slate-400">Son 5 deneme</div></div>
+          <div class="card"><div class="flex items-center justify-between"><div class="stat-label">En iyi net</div><i data-ic="Trophy" class="text-amber-300" style="font-size:16px"></i></div><div class="stat-value mt-2" id="f2best">0</div><div class="mt-1 text-xs text-slate-400">Tüm denemeler</div></div>
+        </div>
+        <div class="card mt-4" id="f2chartcard">
+          <div class="stat-label mb-3">Net trendi · son 5 deneme</div>
+          <svg id="chart" viewBox="0 0 900 400" style="overflow:visible;display:block;width:100%;height:auto"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3: Konu güç analizi -->
+    <div class="sub" id="f3">
+      <div class="cap"><div class="eb">03 · Konu gücü</div><h2>Hangi konuya<br>dönmen gerek?</h2></div>
+      <div class="ui" style="top:600px">
+        <div class="card" style="padding:0.75rem">
+          <div class="rounded-2xl border border-white/[0.06] bg-white/[0.02]" id="f3head">
+            <div class="flex w-full items-center gap-3 px-4 py-3">
+              <i data-ic="ChevronDown" class="text-slate-500" style="font-size:16px;transform:rotate(180deg)"></i>
+              <span class="min-w-0 flex-1 text-sm font-medium text-slate-100">Temel Matematik</span>
+              <span class="badge bg-amber-400/15 text-amber-300" id="f3crit">2 kritik</span>
+              <span class="num text-xs text-slate-500">5/12 konu</span>
+            </div>
+            <div class="px-4 pb-3" id="f3rows"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4: Hedef ve istatistikler -->
+    <div class="sub" id="f4">
+      <div class="cap"><div class="eb">04 · Hedef</div><h2>Sınava kalan süre,<br>arkadaşlarınla sıra.</h2></div>
+      <div class="ui" style="top:600px">
+        <div class="card" id="f4cd">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="stat-label flex items-center gap-2"><i data-ic="CalendarClock" class="text-cyan2" style="font-size:13px"></i> DGS'ye kalan zaman</div>
+            <div class="text-xs text-slate-500">19 Temmuz 2027 · tahmini</div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 sm:gap-3">
+            <div class="rounded-2xl border border-white/[0.06] bg-white/[0.03] py-3 text-center"><div class="num text-3xl font-semibold tracking-tight text-accent">243</div><div class="mt-0.5 text-[11px] uppercase tracking-wider text-slate-400">Gün</div></div>
+            <div class="rounded-2xl border border-white/[0.06] bg-white/[0.03] py-3 text-center"><div class="num text-3xl font-semibold tracking-tight text-slate-50">06</div><div class="mt-0.5 text-[11px] uppercase tracking-wider text-slate-400">Saat</div></div>
+            <div class="rounded-2xl border border-white/[0.06] bg-white/[0.03] py-3 text-center"><div class="num text-3xl font-semibold tracking-tight text-slate-50">41</div><div class="mt-0.5 text-[11px] uppercase tracking-wider text-slate-400">Dakika</div></div>
+            <div class="rounded-2xl border border-white/[0.06] bg-white/[0.03] py-3 text-center"><div class="num text-3xl font-semibold tracking-tight text-slate-50" id="f4sec">20</div><div class="mt-0.5 text-[11px] uppercase tracking-wider text-slate-400">Saniye</div></div>
+          </div>
+        </div>
+        <div class="card mt-4" id="f4lb">
+          <div class="mb-3 flex items-center justify-between"><div class="stat-label">Haftalık sıralama · DGS · canlı</div></div>
+          <table class="w-full text-sm"><thead><tr>
+            <th class="th px-3 text-left first:pl-1">#</th><th class="th px-3 text-left">Kullanıcı</th><th class="th px-3 text-right">Puan</th><th class="th px-3 text-right last:pr-1">Ort. net</th></tr></thead>
+            <tbody id="f4rows"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="dots" id="dots"><span></span><span></span><span></span><span></span></div>
+    <div class="foot" id="foot">Örnek verilerle gösterim</div>
+  </section>
+
+  <!-- ===== SAHNE 4: final (22–28 sn) ===== -->
+  <section class="scene" id="s4">
+    <div id="endglow" style="left:-300px;top:180px;width:1680px;height:1680px;background:radial-gradient(closest-side, rgba(16,185,129,.30), rgba(6,182,212,.10) 52%, transparent)"></div>
+    <div id="endwrap" class="abs" style="left:0;right:0;top:420px;display:flex;flex-direction:column;align-items:center">
+      <svg id="logo4" width="260" height="260" viewBox="0 0 64 64" style="overflow:visible">
+        <rect x="1" y="1" width="62" height="62" rx="16" fill="#0d0f16" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
+        <path d="M14 44V20h13a12 12 0 0 1 0 24H14Zm9-8h4a4 4 0 0 0 0-8h-4v8Z" fill="#10B981"/>
+        <circle cx="46" cy="32" r="6" fill="#06B6D4"/>
+      </svg>
+      <div id="wm4" style="margin-top:36px;font-size:104px;font-weight:700;letter-spacing:-0.045em;color:#f8fafc;line-height:1">Auren Study</div>
+      <div id="tag4" class="big" style="margin-top:96px;font-size:88px;text-align:center;line-height:1.08">
+        <div data-split="Hedefine giden"></div>
+        <div data-split="*yolu gör.*"></div>
+      </div>
+      <div id="url4" style="margin-top:84px;display:flex;flex-direction:column;align-items:center;gap:18px">
+        <div class="glass-pill" style="padding:18px 40px;font-size:34px;font-weight:600;color:#f1f5f9;letter-spacing:-0.01em">aurenstudy.com.tr</div>
+        <div style="font-size:25px;color:#94a3b8">DGS ve YKS için ücretsiz</div>
+      </div>
+    </div>
+  </section>
+  <div id="flash" class="abs" style="inset:0;background:#fff;opacity:0;pointer-events:none"></div>
+</div>
+
+<script src="gsap.min.js"></script>
+<script src="icons.js"></script>
+<script>
+const fmt = n => Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const net = (c, w) => c - w / 4;   // projedeki net = (c*4 - w)/4
+document.querySelectorAll('i[data-ic]').forEach(e => e.innerHTML = ICONS[e.dataset.ic]);
+
+// "*vurgu*" işaretli metni kelime kelime sarar
+document.querySelectorAll('[data-split]').forEach(el => {
+  el.innerHTML = el.dataset.split.split(' ').map(tok => {
+    const hl = tok.includes('*'); return `<span class="w${hl ? ' hl' : ''}">${tok.replaceAll('*', '')}</span>`;
+  }).join('');
+});
+// logo yazısı harf harf
+document.getElementById('wm2').innerHTML = [...'Auren'].map(c => `<span class="w" style="margin-right:0">${c}</span>`).join('');
+
+// ---- örnek veri ----
+const rows1 = [['2026-11-17', 'Üslü Sayılar', '60 dk', net(16, 4)], ['2026-11-16', 'Cümlede Anlam', '45 dk', net(21, 4)], ['2026-11-15', 'Fonksiyonlar', '50 dk', net(14, 6)], ['2026-11-14', 'Olasılık', '40 dk', net(12, 3)]];
+document.getElementById('f1rows').innerHTML = rows1.map((r, i) => `<tr class="row ${i === 0 ? 'bg-accent/[0.06]' : ''}" data-r><td class="num py-3 px-3 pl-1 whitespace-nowrap">${r[0]}</td><td class="py-3 px-3 text-slate-100">${r[1]}</td><td class="num py-3 px-3 text-right">${r[2]}</td><td class="num py-3 px-3 pr-1 text-right font-semibold text-accent">${fmt(r[3])}</td></tr>`).join('');
+
+const LV = { critical: ['Kritik / Çalışılmalı', 'bg-amber-400/15 text-amber-300', 'bg-amber-400'], developing: ['Gelişiyor', 'bg-cyan-400/15 text-cyan-300', 'bg-cyan-400'], strong: ['Ustalaşıldı', 'bg-emerald-400/15 text-emerald-300', 'bg-emerald-400'] };
+const rows3 = [['Temel Kavramlar', 'strong', 86], ['Üslü Sayılar', 'developing', 61], ['Köklü Sayılar', 'critical', 32], ['Oran – Orantı', 'developing', 54], ['Rasyonel Sayılar', 'critical', 27]];
+document.getElementById('f3rows').innerHTML = rows3.map(([n, l, s]) => `<div class="row py-3" data-r3><div class="flex items-center justify-between gap-3"><span class="text-sm text-slate-100">${n}</span><span class="badge ${LV[l][1]}"><span class="h-1.5 w-1.5 rounded-full ${LV[l][2]}"></span>${LV[l][0]}</span></div><div class="mt-2.5 flex items-center gap-3"><div class="flex-1"><div class="h-2 overflow-hidden rounded-full bg-white/[0.06]"><div class="h-full rounded-full ${LV[l][2]} bar3" data-w="${s}" style="width:0%"></div></div></div><span class="num w-7 text-right text-xs text-slate-300">${s}</span></div></div>`).join('');
+
+const lb = [['1', '@deniz', '482', '47,5'], ['2', '@ece (sen)', '455', '46,1', true], ['3', '@kerem', '431', '44,8'], ['4', '@selin', '398', '41,3']];
+document.getElementById('f4rows').innerHTML = lb.map(r => `<tr class="row ${r[4] ? 'bg-accent/[0.06]' : ''}" data-r4><td class="num py-3 px-3 pl-1">${r[0]}</td><td class="py-3 px-3 ${r[4] ? 'font-semibold text-accent' : 'text-slate-100'}">${r[1]}</td><td class="num py-3 px-3 text-right font-semibold">${r[2]}</td><td class="num py-3 px-3 pr-1 text-right">${r[3]}</td></tr>`).join('');
+
+// ---- trend grafiği (recharts görünümü: ızgara + yumuşak çizgi + alan) ----
+const pts = [38.5, 42, 45.25, 49.5, 55], labs = ['25 Eki', '01 Kas', '08 Kas', '12 Kas', '16 Kas'];
+const W = 900, H = 400, pl = 44, pr = 12, pt = 16, pb = 36, ymax = 60;
+const X = i => pl + (W - pl - pr) * i / (pts.length - 1), Y = v => pt + (H - pt - pb) * (1 - v / ymax);
+let d = `M${X(0)} ${Y(pts[0])}`;
+for (let i = 0; i < pts.length - 1; i++) { const x0 = X(i), x1 = X(i + 1), cx = (x0 + x1) / 2; d += ` C${cx} ${Y(pts[i])} ${cx} ${Y(pts[i + 1])} ${x1} ${Y(pts[i + 1])}`; }
+const area = d + ` L${X(4)} ${Y(0)} L${X(0)} ${Y(0)} Z`;
+let svg = `<defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10B981" stop-opacity=".35"/><stop offset="100%" stop-color="#10B981" stop-opacity="0"/></linearGradient><clipPath id="clipc"><rect id="cliprect" x="0" y="0" width="0" height="${H}"/></clipPath></defs>`;
+[0, 15, 30, 45, 60].forEach(v => { svg += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(255,255,255,.06)"/><text x="${pl - 12}" y="${Y(v) + 5}" text-anchor="end" fill="#64748b" font-size="15">${v}</text>`; });
+labs.forEach((l, i) => svg += `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" fill="#64748b" font-size="15">${l}</text>`);
+svg += `<g clip-path="url(#clipc)"><path d="${area}" fill="url(#gg)"/><path d="${d}" fill="none" stroke="#10B981" stroke-width="5" stroke-linecap="round"/></g>`;
+pts.forEach((v, i) => svg += `<circle class="cdot" cx="${X(i)}" cy="${Y(v)}" r="7" fill="#10B981"/>`);
+document.getElementById('chart').innerHTML = svg;
+
+// ---- toz parçacıkları (sabit tohum) ----
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const dust = document.getElementById('dust');
+for (let i = 0; i < 26; i++) dust.insertAdjacentHTML('beforeend', `<circle class="dp" cx="${470 + rnd() * 380}" cy="${1130 + rnd() * 280}" r="${1.4 + rnd() * 2.4}" opacity="${0.15 + rnd() * 0.5}"/>`);
+
+// ---------------- ZAMAN ÇİZELGESİ ----------------
+const E = 'power3.out', S = (a, b) => document.querySelectorAll(a);
+const tl = gsap.timeline({ paused: true });
+const show = (id, a, b) => { tl.set(id, { display: 'block' }, a); if (b != null) tl.set(id, { display: 'none' }, b); };
+const wordsIn = (sel, at, step = 0.11) => tl.fromTo(sel + ' .w', { opacity: 0, y: 34, filter: 'blur(10px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.6, ease: E, stagger: step }, at);
+
+// S1 0–5
+show('#s1', 0, 5.1);
+tl.fromTo('#s1', { scale: 1.06 }, { scale: 1, duration: 5.1, ease: 'none' }, 0);
+tl.fromTo('#lampHalo', { opacity: 0 }, { opacity: 1, duration: 1.2, ease: 'power2.out' }, 0);
+tl.fromTo('#cone', { opacity: 0 }, { opacity: 1, duration: 1.2 }, 0.2);
+tl.to('#clock', { opacity: 0.9, duration: 1, ease: 'power2.out' }, 0.3);
+tl.fromTo('#clockLabel', { opacity: 0 }, { opacity: 1, duration: 1 }, 0.6);
+for (let k = 0; k < 5; k++) tl.set('#colon', { opacity: k % 2 ? 0.25 : 1 }, k);
+tl.fromTo('#head', { rotation: -2 }, { rotation: 7, duration: 2.5, ease: 'sine.inOut', repeat: 1, yoyo: true }, 0);
+tl.fromTo('#pen', { x: 0, y: 0 }, { x: 60, y: 6, duration: 0.5, ease: 'sine.inOut', repeat: 9, yoyo: true }, 0);
+S('.ln').forEach((p, i) => { const L = p.getTotalLength(); tl.fromTo(p, { strokeDasharray: L, strokeDashoffset: L }, { strokeDashoffset: 0, duration: 1.1, ease: 'power1.inOut' }, 0.5 + i * 1.0); });
+S('.dp').forEach((p, i) => tl.fromTo(p, { y: 0 }, { y: -(40 + (i % 7) * 12), duration: 2.8 + (i % 5) * 0.3, ease: 'sine.inOut', repeat: 1, yoyo: true }, 0));
+tl.fromTo('#t1a .w', { opacity: 0, y: 36, filter: 'blur(12px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.7, ease: E, stagger: 0.16 }, 0.5);
+tl.fromTo('#t1b .w', { opacity: 0, y: 36, filter: 'blur(12px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.7, ease: E, stagger: 0.2 }, 2.5);
+tl.to('#t1', { opacity: 0, y: -24, duration: 0.3, ease: 'power2.in' }, 4.6);
+// lamba söner (5,0)
+tl.to('#s1fade', { opacity: 1, duration: 0.12, ease: 'power2.in' }, 4.9);
+tl.to('#clock,#clockLabel', { opacity: 0, duration: 0.2 }, 4.8);
+
+// S2 5–12
+show('#s2', 5.0, 12.4);
+tl.to('#bgglow', { opacity: 1, duration: 1.4, ease: 'power2.out' }, 5.5);
+tl.fromTo('#tile2', { opacity: 0, scale: 0.8, transformOrigin: '32px 32px' }, { opacity: 1, scale: 1, duration: 0.6, ease: 'back.out(1.6)' }, 5.5);
+const dp = document.getElementById('dpath2'), DL = dp.getTotalLength();
+tl.fromTo('#dpath2', { strokeDasharray: DL, strokeDashoffset: DL }, { strokeDashoffset: 0, duration: 0.8, ease: 'power2.inOut' }, 5.6);
+tl.to('#dpath2', { fillOpacity: 1, duration: 0.4, ease: 'power1.out' }, 6.2);
+tl.fromTo('#dot2', { scale: 0, transformOrigin: '46px 32px' }, { scale: 1, duration: 0.45, ease: 'back.out(3)' }, 6.5);
+tl.fromTo('#ring2', { attr: { r: 6 }, opacity: 0.9 }, { attr: { r: 30 }, opacity: 0, duration: 0.9, ease: 'power2.out' }, 6.5);
+tl.fromTo('#wm2 .w', { opacity: 0, y: 60, filter: 'blur(12px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.6, ease: E, stagger: 0.07 }, 6.5);
+tl.fromTo('#study2', { opacity: 0, letterSpacing: '1em' }, { opacity: 1, letterSpacing: '0.62em', duration: 0.9, ease: E }, 7.0);
+tl.to('#logoGroup', { y: -310, scale: 0.46, duration: 0.7, ease: 'power3.inOut' }, 8.0);
+tl.to('#study2', { opacity: 0, duration: 0.3 }, 8.0);
+tl.fromTo('#tag .tl:nth-child(1)', { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 8.0);
+wordsIn('#tag .tl:nth-child(1)', 8.1, 0.12);
+tl.fromTo('#tag .tl:nth-child(2)', { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 9.0);
+wordsIn('#tag .tl:nth-child(2)', 9.1, 0.12);
+tl.fromTo('#tag .tl:nth-child(3)', { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 10.0);
+wordsIn('#tag .tl:nth-child(3)', 10.1, 0.12);
+tl.to('#tag .tl:nth-child(1)', { opacity: 0.45, duration: 0.4 }, 9.0);
+tl.to('#tag .tl:nth-child(2)', { opacity: 0.45, duration: 0.4 }, 10.0);
+tl.to('#tag', { opacity: 0, y: -50, duration: 0.45, ease: 'power2.in' }, 11.55);
+tl.to('#logoGroup', { opacity: 0, y: -520, duration: 0.45, ease: 'power2.in' }, 11.55);
+
+// S3 12–22
+show('#s3', 12.0, 22.4);
+const subs = [['#f1', 12.0], ['#f2', 14.5], ['#f3', 17.0], ['#f4', 19.5]];
+subs.forEach(([id, t], i) => {
+  const end = t + 2.5, last = i === 3;
+  show(id, t - 0.1, end + 0.1);
+  tl.fromTo(id + ' .cap', { opacity: 0, y: 50, filter: 'blur(8px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.6, ease: E }, t);
+  tl.fromTo(id + ' .ui > *', { opacity: 0, y: 70, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: E, stagger: 0.12 }, t + 0.12);
+  tl.to(id, { opacity: 0, y: -40, duration: 0.3, ease: 'power2.in' }, end - 0.32);
+  tl.fromTo('#dots span:nth-child(' + (i + 1) + ')', { width: 8, background: 'rgba(255,255,255,.18)' }, { width: 44, background: '#10B981', duration: 0.4, ease: E }, t);
+  tl.to('#dots span:nth-child(' + (i + 1) + ')', { width: 8, background: 'rgba(255,255,255,.18)', duration: 0.3 }, end - 0.1);
+});
+tl.fromTo('#foot', { opacity: 0 }, { opacity: 1, duration: 0.6 }, 12.3);
+tl.to('#s3', { opacity: 0, duration: 0.25 }, 21.75);
+// 3a sayaçlar + satırlar
+const c1 = { h: 0, q: 0 };
+tl.to(c1, { h: 14.5, q: 312, duration: 1.1, ease: 'power2.out', onUpdate: () => { f1h.textContent = fmt(c1.h); f1q.textContent = Math.round(c1.q); } }, 12.5);
+S('[data-r]').forEach((r, i) => tl.fromTo(r, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.45, ease: E }, 12.75 + i * 0.25));
+// 3b
+const c2 = { a: 0, b: 0 };
+tl.to(c2, { a: 46.05, b: 55, duration: 1.0, ease: 'power2.out', onUpdate: () => { f2avg.textContent = fmt(c2.a); f2best.textContent = fmt(c2.b); } }, 15.0);
+tl.fromTo('#cliprect', { attr: { width: 0 } }, { attr: { width: 900 }, duration: 1.1, ease: 'power2.inOut' }, 15.0);
+S('.cdot').forEach((c, i) => tl.fromTo(c, { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.35, ease: 'back.out(3)' }, 15.25 + i * 0.25));
+// 3c
+S('[data-r3]').forEach((r, i) => tl.fromTo(r, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.45, ease: E }, 17.25 + i * 0.25));
+S('.bar3').forEach((b, i) => tl.to(b, { width: b.dataset.w + '%', duration: 0.8, ease: 'power3.out' }, 17.25 + i * 0.25));
+// 3d
+S('[data-r4]').forEach((r, i) => tl.fromTo(r, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.45, ease: E }, 20.25 + i * 0.25));
+const c4 = { v: 20.99 };
+tl.fromTo(c4, { v: 20.99 }, { v: 17.99, duration: 3, ease: 'none', onUpdate: () => { f4sec.textContent = String(Math.floor(c4.v)).padStart(2, '0'); } }, 19.5);
+
+// S4 22–28
+show('#s4', 22.0);
+tl.fromTo('#flash', { opacity: 0.0 }, { opacity: 0.0, duration: 0.01 }, 0);
+tl.fromTo('#s4', { opacity: 0 }, { opacity: 1, duration: 0.01 }, 22.0);
+tl.fromTo('#endglow', { opacity: 0, scale: 0.7, transformOrigin: '50% 50%' }, { opacity: 1, scale: 1, duration: 1.4, ease: 'power2.out' }, 22.0);
+tl.fromTo('#logo4', { opacity: 0, scale: 0.6, y: 40, transformOrigin: '50% 50%' }, { opacity: 1, scale: 1, y: 0, duration: 0.9, ease: 'back.out(1.5)' }, 22.0);
+tl.fromTo('#wm4', { opacity: 0, y: 40, filter: 'blur(10px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.7, ease: E }, 22.5);
+tl.fromTo('#tag4 .w', { opacity: 0, y: 50, filter: 'blur(12px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.7, ease: E, stagger: 0.18 }, 23.0);
+tl.fromTo('#url4', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 24.5);
+tl.to('#logo4', { y: -10, duration: 1.75, ease: 'sine.inOut', repeat: 1, yoyo: true }, 24.5);
+
+tl.set({}, {}, 28);
+window.DURATION = 28;
+window.seek = async (t) => { tl.time(t, false); return true; };
+</script>
+</body>
+</html>

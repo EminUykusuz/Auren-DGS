@@ -41,7 +41,8 @@ html[data-glow='off'] .ambient-glow { display: none; }
   body { @apply bg-obsidian text-slate-300 antialiased; line-height: 1.5; transition: background-color .25s; }
   input, select { @apply w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-100 transition placeholder:text-slate-500 focus:border-accent/60 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-accent/20; }
   select option, select optgroup { @apply bg-slate-900 text-slate-100; }
-  input[type='checkbox'] { @apply hidden; }
+  /* iOS, 16px altı alanlara odaklanınca sayfayı yakınlaştırır; giriş/kayıt formunda bunu önler */
+  @media (max-width: 639px) { .auth-page input:not([type='checkbox']) { font-size: 16px; } }
   input[type='range'] { @apply h-2 cursor-pointer appearance-none rounded-full border-0 bg-white/10 p-0 backdrop-blur-none; accent-color: rgb(var(--accent)); }
   label { @apply mb-1.5 block text-xs font-medium text-slate-400; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -107,3 +108,16 @@ html[data-perf='on'] *, html[data-perf='on'] *::before, html[data-perf='on'] *::
 html[data-perf='on'] .float-slow { animation: none; }
 @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
 .animate-shake { animation: shake .4s ease; }
+
+/* Landing: imleci izleyen ışık, parlayan vurgu metni, kayan şerit */
+.spot::after { content: ''; pointer-events: none; position: absolute; inset: 0; z-index: -1; border-radius: inherit; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--accent) / .16), transparent 65%); }
+.spot:hover::after { opacity: 1; }
+@keyframes shine-move { to { background-position: 200% center; } }
+.text-shine { background: linear-gradient(100deg, rgb(var(--accent)) 15%, rgb(var(--cyan2)) 50%, rgb(var(--accent)) 85%); background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine-move 6s linear infinite; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee { animation: marquee 38s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .text-shine, .marquee { animation: none; } }
+html[data-perf='on'] .text-shine, html[data-perf='on'] .marquee { animation: none; }

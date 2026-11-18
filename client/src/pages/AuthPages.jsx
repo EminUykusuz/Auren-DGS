@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Eye, EyeOff, Loader2, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Check, Eye, EyeOff, Loader2, Moon, Sun, X } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth, useExam } from '../store.js';
 import { useTheme } from '../theme.js';
@@ -16,16 +17,16 @@ const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transiti
 function Frame({ title, subtitle, children, footer }) {
   const { theme, toggleMode } = useTheme(); const light = theme === 'light';
   return (
-    <div className="relative flex min-h-screen flex-col px-4 py-5">
+    <div className="auth-page relative flex min-h-screen flex-col px-4 py-4 sm:py-5" style={{ minHeight: '100dvh' }}>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="float-slow absolute left-1/2 top-1/3 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .16), transparent)' }} />
+        <div className="float-slow absolute left-1/2 top-1/3 h-[360px] w-[360px] sm:h-[520px] sm:w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .16), transparent)' }} />
       </div>
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
         <Link to="/" className="group inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-slate-100"><ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />Ana sayfa</Link>
         <motion.button whileTap={{ scale: 0.9, rotate: 15 }} type="button" onClick={toggleMode} aria-label={light ? 'Koyu temaya geç' : 'Açık temaya geç'} className="btn-ghost !px-3 !py-2">{light ? <Moon size={16} /> : <Sun size={16} />}</motion.button>
       </div>
-      <div className="flex flex-1 items-center justify-center py-8">
-        <motion.div initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring, stiffness: 180 }} className="card w-full max-w-md !p-7">
+      <div className="flex flex-1 items-center justify-center py-5 sm:py-8">
+        <motion.div initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring, stiffness: 180 }} className="card w-full max-w-md !p-5 sm:!p-7">
           <motion.div variants={list} initial="hidden" animate="show">
             <motion.div variants={item} className="mb-6 text-xl font-bold text-slate-100">Auren</motion.div>
             <motion.h1 variants={item} className="text-2xl font-semibold tracking-tight text-slate-50">{title}</motion.h1>
@@ -99,11 +100,70 @@ export function Login() {
 const strengthOf = (p) => { let n = 0; if (p.length >= 8) n++; if (/[a-zA-ZçğıöşüÇĞİÖŞÜ]/.test(p) && /\d/.test(p)) n++; if (p.length >= 12) n++; if (/[^\w\s]/.test(p)) n++; return n; };
 const STRENGTH = ['Çok zayıf', 'Zayıf', 'Orta', 'İyi', 'Güçlü'];
 
+const DocLink = ({ k, onOpen, children }) => (
+  <button type="button" onClick={() => onOpen(k)} className="font-medium text-accent underline-offset-4 hover:underline">{children}</button>
+);
+
+// Onay kutusu: görünür özel kutu (gerçek input ekran okuyucu için kalır, böylece tarayıcı doğrulaması da çalışır)
+function Consent({ onOpen }) {
+  return (
+    <div className="space-y-2">
+      <label className="relative !mb-0 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 !text-[13px] leading-snug !font-normal !text-slate-300 transition hover:bg-white/[0.06]">
+        <input type="checkbox" name="terms" required className="peer !absolute left-5 top-5 !block !h-px !w-px !p-0 opacity-0" />
+        <span aria-hidden="true" className="mt-px grid h-5 w-5 shrink-0 place-items-center rounded-md border border-white/25 bg-white/[0.05] text-onaccent transition peer-checked:border-accent peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent/50 [&>svg]:scale-50 [&>svg]:opacity-0 [&>svg]:transition peer-checked:[&>svg]:scale-100 peer-checked:[&>svg]:opacity-100"><Check size={14} strokeWidth={3} /></span>
+        <span><DocLink k="kosullar" onOpen={onOpen}>Kullanım Koşulları</DocLink> ve <DocLink k="gizlilik" onOpen={onOpen}>Gizlilik Politikası</DocLink>&apos;nı okudum, kabul ediyorum.</span>
+      </label>
+      <p className="px-1 text-xs leading-relaxed text-slate-500">Kişisel verilerin yalnızca hizmeti sunmak için işlenir, üçüncü kişilere satılmaz. Ayrıntılar için <DocLink k="kvkk" onOpen={onOpen}>KVKK Aydınlatma Metni</DocLink>&apos;ni incele.</p>
+    </div>
+  );
+}
+
+// Politika metnini kayıt sayfasından ayrılmadan okutan pencere (metinler tembel yüklenir)
+function PolicyModal({ doc, onClose }) {
+  const [LEGAL, setLegal] = useState(null);
+  useEffect(() => { if (doc && !LEGAL) import('./Legal.jsx').then(m => setLegal(m.LEGAL)); }, [doc, LEGAL]);
+  useEffect(() => {
+    if (!doc) return;
+    const key = e => e.key === 'Escape' && onClose();
+    const prev = document.body.style.overflow; document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', key);
+    return () => { window.removeEventListener('keydown', key); document.body.style.overflow = prev; };
+  }, [doc, onClose]);
+  const d = doc && LEGAL?.[doc];
+  return createPortal(
+    <AnimatePresence>
+      {doc && (
+        <motion.div key="bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-6">
+          <motion.div role="dialog" aria-modal="true" aria-label={d?.title || 'Politika'} onClick={e => e.stopPropagation()}
+            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} transition={spring}
+            className="card flex max-h-[88dvh] w-full max-w-2xl flex-col !rounded-b-none !p-0 sm:max-h-[80dvh] sm:!rounded-b-[28px]">
+            <div className="flex items-start justify-between gap-3 border-b border-white/[0.06] px-5 py-4 sm:px-6">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-slate-50">{d?.title || 'Yükleniyor…'}</h2>
+                {d && <p className="mt-1 text-xs leading-relaxed text-slate-400">{d.lead}</p>}
+              </div>
+              <button type="button" onClick={onClose} aria-label="Kapat" className="btn-ghost !p-2"><X size={16} /></button>
+            </div>
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-4 text-[13px] leading-relaxed text-slate-400 sm:px-6 [&_b]:font-semibold [&_b]:text-slate-200 [&_li]:mt-1.5 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
+              {d ? d.sections.map(([h, ...body], i) => <section key={h}><h3 className="mb-1.5 text-sm font-semibold text-slate-100">{i + 1}. {h}</h3>{body}</section>)
+                : <Loader2 size={18} className="mx-auto animate-spin text-slate-500" aria-label="Yükleniyor" />}
+            </div>
+            <div className="border-t border-white/[0.06] px-5 py-3 sm:px-6"><button type="button" onClick={onClose} className="btn w-full">Anladım, forma dön</button></div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}
+
 export function Register() {
   const { register } = useAuth(); const nav = useNavigate();
   const mode = useExam(s => s.mode);
   const [track, setTrack] = useState(mode);   // landing'de seçilen sınav hazır gelir
   const [pw, setPw] = useState('');
+  const [doc, setDoc] = useState(null);   // açık politika penceresi: 'kosullar' | 'gizlilik' | 'kvkk'
   const f = useForm(async d => { await register(d.username, d.email, d.password, track, track === 'BOTH' ? 'DGS' : track); nav('/'); });
   const st = pw ? strengthOf(pw) : -1;
   return (
@@ -126,12 +186,10 @@ export function Register() {
           <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className={clsx('h-1 flex-1 rounded-full transition-colors duration-300', i < st ? (st >= 3 ? 'bg-accent' : st === 2 ? 'bg-amber-400' : 'bg-red-400') : 'bg-white/10')} />)}</div>
           <p className="mt-1 text-xs text-slate-500" role="status">{st >= 0 ? STRENGTH[st] + ' · ' : ''}En az 8 karakter, harf ve rakam içermeli.</p>
         </Field>
-        <motion.label variants={item} className="flex cursor-pointer items-start gap-2.5 !text-xs !text-slate-400">
-          <input type="checkbox" name="terms" required className="mt-0.5 !h-4 !w-4 !p-0 accent-[rgb(var(--accent))]" />
-          <span><Link className="text-accent hover:underline" to="/kosullar" target="_blank">Kullanım Koşulları</Link>&apos;nı ve <Link className="text-accent hover:underline" to="/gizlilik" target="_blank">Gizlilik Politikası</Link>&apos;nı okudum; <Link className="text-accent hover:underline" to="/kvkk" target="_blank">KVKK Aydınlatma Metni</Link> kapsamında verilerimin işlenmesini kabul ediyorum.</span>
-        </motion.label>
+        <motion.div variants={item}><Consent onOpen={setDoc} /></motion.div>
         <Msg {...f} /><Submit busy={f.busy}>{track === 'BOTH' ? 'Hibrit hesabı oluştur' : `${track} için kayıt ol`}</Submit>
       </Form>
+      <PolicyModal doc={doc} onClose={() => setDoc(null)} />
     </Frame>
   );
 }

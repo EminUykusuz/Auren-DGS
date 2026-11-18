@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, BarChart3, CalendarCheck, Layers, Moon, Plus, ShieldCheck, Sun, Target, Users } from 'lucide-react';
+import { AnimatePresence, MotionConfig, animate, motion, useInView, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
+import { ArrowRight, BarChart3, CalendarCheck, Flame, Layers, Moon, Plus, ShieldCheck, Sun, Target, TrendingUp, Users } from 'lucide-react';
 import { useExam } from '../store.js';
 import { useTheme } from '../theme.js';
 import ModeSwitch from '../components/ModeSwitch.jsx';
@@ -20,18 +20,60 @@ const SAMPLE = {
   YKS: { title: 'TYT denemesi', rows: [['Türkçe', 31, 6], ['Sosyal Bilimler', 15, 3], ['Temel Matematik', 28, 8], ['Fen Bilimleri', 12, 4]] },
 };
 
+// Sayıyı bir önceki değerinden yenisine akıtır; ekrana girince başlar
+function CountUp({ value, className }) {
+  const ref = useRef(null); const prev = useRef(0);
+  const seen = useInView(ref, { once: true, margin: '0px 0px -10% 0px' }); const calm = useReducedMotion();
+  useEffect(() => {
+    if (!seen || !ref.current) return;
+    if (calm) { ref.current.textContent = fmt(value); prev.current = value; return; }
+    const c = animate(prev.current, value, { duration: 0.9, ease: [0.2, 0.7, 0.2, 1], onUpdate: v => { prev.current = v; if (ref.current) ref.current.textContent = fmt(v); } });
+    return () => c.stop();
+  }, [value, seen, calm]);
+  return <span ref={ref} className={className}>{fmt(value)}</span>;
+}
+
+// İmleci izleyen ışık: kart üzerinde hover'da yumuşak vurgu
+const trackPointer = e => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`); };
+const SpotCard = ({ children, className, index = 0 }) => (
+  <motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '0px 0px -8% 0px' }}
+    transition={{ duration: 0.55, delay: index * 0.08, ease: [0.2, 0.7, 0.2, 1] }} whileHover={{ y: -5 }} onPointerMove={trackPointer} className={clsx('card spot', className)}>{children}</motion.div>
+);
+
+// Sayfa üstünde ilerleme çizgisi
+function ScrollBar() {
+  const { scrollYProgress } = useScroll(); const x = useSpring(scrollYProgress, { stiffness: 140, damping: 30, mass: 0.4 });
+  return <motion.div aria-hidden="true" style={{ scaleX: x }} className="fixed inset-x-0 top-0 z-40 h-[3px] origin-left bg-gradient-to-r from-accent to-cyan-400" />;
+}
+
+const Chip = ({ icon: Icon, children, className, delay = 0 }) => (
+  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay, type: 'spring', stiffness: 200, damping: 16 }} className={clsx('absolute z-10 hidden sm:block', className)}>
+    <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 4 + delay * 2, repeat: Infinity, ease: 'easeInOut' }} className="glass-pill flex items-center gap-2 whitespace-nowrap px-3.5 py-2 text-xs font-semibold text-slate-100">
+      <Icon size={14} className="text-accent" />{children}
+    </motion.div>
+  </motion.div>
+);
+
 function SampleCard() {
   const mode = useExam(s => s.mode); const { title, rows } = SAMPLE[mode];
   const total = rows.reduce((s, [, c, w]) => s + net(c, w), 0);
+  const top = Math.max(...rows.map(([, c, w]) => net(c, w)));
   return (
-    <div className="card !p-6">
-      <div className="mb-4 flex items-center justify-between"><span className="text-sm font-semibold text-slate-100">{title}</span><span className="badge bg-white/[0.06] text-slate-400">Örnek</span></div>
-      <ul>{rows.map(([n, c, w]) => (
-        <li key={n} className="row grid grid-cols-[1fr_auto_4.5rem] items-baseline gap-3 py-3 text-sm">
-          <span className="text-slate-300">{n}</span><span className="num text-xs text-slate-500">{c} D · {w} Y</span><b className="num text-right text-base text-slate-50">{fmt(net(c, w))}</b>
-        </li>))}</ul>
-      <div className="mt-3 flex items-baseline justify-between rounded-2xl bg-accent/15 px-4 py-3.5">
-        <span className="text-sm font-medium text-slate-200">Toplam net</span><b className="num text-3xl font-semibold tracking-tight text-accent">{fmt(total)}</b>
+    <div className="relative">
+      <Chip icon={TrendingUp} className="-right-4 -top-5 lg:-right-6" delay={0.9}>+4,5 net bu hafta</Chip>
+      <Chip icon={Flame} className="-bottom-5 -left-4 lg:-left-6" delay={1.2}>7 günlük seri</Chip>
+      <div className="card spot !p-6" onPointerMove={trackPointer}>
+        <div className="mb-4 flex items-center justify-between"><span className="text-sm font-semibold text-slate-100">{title}</span><span className="badge bg-white/[0.06] text-slate-400">Örnek</span></div>
+        <ul key={mode}>{rows.map(([n, c, w], i) => (
+          <motion.li key={n} initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 + i * 0.12, duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }} className="row py-3 text-sm">
+            <div className="grid grid-cols-[1fr_auto_4.5rem] items-baseline gap-3">
+              <span className="text-slate-300">{n}</span><span className="num text-xs text-slate-500">{c} D · {w} Y</span><b className="num text-right text-base text-slate-50">{fmt(net(c, w))}</b>
+            </div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]"><motion.div initial={{ scaleX: 0 }} animate={{ scaleX: net(c, w) / top }} transition={{ delay: 0.7 + i * 0.12, duration: 0.9, ease: [0.2, 0.7, 0.2, 1] }} className="h-full origin-left rounded-full bg-gradient-to-r from-accent to-cyan-400" /></div>
+          </motion.li>))}</ul>
+        <div className="mt-3 flex items-baseline justify-between rounded-2xl bg-accent/15 px-4 py-3.5">
+          <span className="text-sm font-medium text-slate-200">Toplam net</span><CountUp key={mode} value={total} className="num text-3xl font-semibold tracking-tight text-accent" />
+        </div>
       </div>
     </div>
   );
@@ -41,13 +83,13 @@ const Reveal = ({ children, delay = 0, className }) => (
   <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '0px 0px -8% 0px' }} transition={{ duration: 0.6, delay, ease: [0.2, 0.7, 0.2, 1] }} className={className}>{children}</motion.div>
 );
 
-const Section = ({ id, title, lead, children, className }) => (
+const Section = ({ id, title, lead, children, className, plain }) => (
   <section id={id} className={clsx('mx-auto w-full max-w-6xl px-4 py-16 md:py-24', className)}>
     <Reveal className="mb-10 max-w-2xl">
       <h2 className="text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl">{title}</h2>
       {lead && <p className="mt-3 text-base text-slate-400">{lead}</p>}
     </Reveal>
-    <Reveal delay={0.08}>{children}</Reveal>
+    {plain ? children : <Reveal delay={0.08}>{children}</Reveal>}
   </section>
 );
 
@@ -105,9 +147,9 @@ function Estimator() {
         <div className="flex flex-col justify-between gap-6 border-t border-white/[0.06] bg-accent/[0.06] p-6 md:border-l md:border-t-0">
           <div aria-live="polite">
             <div className="stat-label">Toplam net · {def.label}</div>
-            <div className="num mt-1 text-5xl font-semibold tracking-tight text-slate-50">{fmt(cur.n)}<span className="ml-2 text-base font-medium text-slate-500">/ {cur.m}</span></div>
+            <div className="num mt-1 text-5xl font-semibold tracking-tight text-slate-50"><CountUp value={cur.n} /><span className="ml-2 text-base font-medium text-slate-500">/ {cur.m}</span></div>
             <div className="stat-label mt-6">Tahmini puan</div>
-            <div className="num mt-1 text-4xl font-semibold tracking-tight text-accent">{cur.n > 0 ? fmt(Math.round(cur.score * 10) / 10) : '—'}</div>
+            <div className="num mt-1 text-4xl font-semibold tracking-tight text-accent">{cur.n > 0 ? <CountUp value={Math.round(cur.score * 10) / 10} /> : '—'}</div>
             {blend !== null && <p className="mt-4 text-sm text-slate-300">TYT ve AYT birlikte yaklaşık <b className="num text-slate-50">{fmt(Math.round(blend * 10) / 10)}</b> yerleştirme puanı.</p>}
           </div>
           <p className="text-xs leading-relaxed text-slate-500">Tahmin 100–500 ölçeğinde yaklaşık bir göstergedir. Gerçek puan, sınavın zorluğuna ve adayların genel başarısına göre hesaplanır.</p>
@@ -212,11 +254,25 @@ const LD = {
   ],
 };
 
+const HEAD = [['DGS', 0], ['ve', 0], ['YKS', 0], ['hazırlığı,', 0], ['tek', 1], ['akıllı', 1], ['çatı', 1], ['altında.', 1]];
+const headList = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } };
+const headWord = { hidden: { opacity: 0, y: 22, filter: 'blur(8px)' }, show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.6, ease: [0.2, 0.7, 0.2, 1] } } };
+
+const MARQUEE = ['Deneme analizi', 'Hata nedeni', 'Konu gücü', 'Pomodoro', 'Haftalık sıralama', 'DGS', 'TYT', 'AYT', 'Geri sayım', 'Arkadaş düellosu'];
+const Marquee = () => (
+  <div aria-hidden="true" className="relative mx-auto max-w-6xl overflow-hidden px-4 py-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
+    <div className="marquee flex w-max gap-3">{[...MARQUEE, ...MARQUEE].map((m, i) => <span key={i} className="glass-pill whitespace-nowrap px-4 py-1.5 text-xs font-medium text-slate-300">{m}</span>)}</div>
+  </div>
+);
+
 export default function Landing() {
   const { theme, toggleMode } = useTheme(); const light = theme === 'light';
+  const { scrollY } = useScroll(); const cardY = useTransform(scrollY, [0, 600], [0, -36]); const orbY = useTransform(scrollY, [0, 800], [0, 120]);
   const link = 'text-sm text-slate-400 transition hover:text-slate-100';
   return (
+    <MotionConfig reducedMotion="user">
     <div className="relative">
+      <ScrollBar />
       <JsonLd data={LD} />
       <header className="sticky top-0 z-30 px-4 pt-3">
         <div className="glass-pill mx-auto flex max-w-6xl items-center justify-between gap-3 py-2 pl-5 pr-2">
@@ -231,58 +287,71 @@ export default function Landing() {
       </header>
 
       <main>
-        <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-10 pt-16 md:grid-cols-[1.1fr_1fr] md:pt-24" aria-labelledby="hero-h">
+        <div className="relative">
+          <motion.div aria-hidden="true" style={{ y: orbY }} className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="float-slow absolute -left-24 top-10 h-72 w-72 rounded-full sm:h-96 sm:w-96" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .18), transparent)' }} />
+            <div className="float-slow absolute -right-20 top-40 h-72 w-72 rounded-full [animation-delay:-6s] sm:h-[28rem] sm:w-[28rem]" style={{ background: 'radial-gradient(closest-side, rgb(var(--cyan2) / .16), transparent)' }} />
+          </motion.div>
+        <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-6 pt-16 md:grid-cols-[1.1fr_1fr] md:pt-24" aria-labelledby="hero-h">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.2, 0.7, 0.2, 1] }}>
             <ModeSwitch local />
-            <h1 id="hero-h" className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">DGS ve YKS hazırlığı, tek akıllı çatı altında.</h1>
+            <motion.h1 id="hero-h" variants={headList} initial="hidden" animate="show" className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">
+              {HEAD.map(([w, hl], i) => <motion.span key={i} variants={headWord} className={clsx('mr-[0.28em] inline-block', hl && 'text-shine')}>{w}</motion.span>)}
+            </motion.h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-400">Auren, iki sınavı aynı hassasiyetle yöneten hibrit bir hazırlık sistemi. Denemelerini analiz eder, hatalarının nedenini bulur, çalışmanı planlar ve seni arkadaşlarınla birlikte ileri taşır.</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link to="/kayit" className="btn btn-shine !px-6 !py-3">Ücretsiz başla <ArrowRight size={16} /></Link>
               <a href="#ozellikler" className="btn-ghost !px-6 !py-3">Neler sunuyor?</a>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 32, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, delay: 0.15, ease: [0.2, 0.7, 0.2, 1] }}><SampleCard /></motion.div>
+          <motion.div style={{ y: cardY }} className="md:will-change-transform"><motion.div initial={{ opacity: 0, y: 32, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, delay: 0.15, ease: [0.2, 0.7, 0.2, 1] }}><SampleCard /></motion.div></motion.div>
         </section>
+        <Marquee />
+        </div>
 
-        <Section id="ozellikler" title="Hazırlığın her adımı için eksiksiz bir sistem" lead="Tek bir uygulamada, iki sınavın tüm ihtiyaçları. Her modül seçtiğin sınava göre şekillenir.">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{FEATURES.map(([Icon, t, d]) => (
-            <motion.div key={t} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="card !p-6">
-              <span className="mb-4 grid h-10 w-10 place-items-center rounded-2xl bg-accent/15 text-accent"><Icon size={20} strokeWidth={1.8} /></span>
+        <Section plain id="ozellikler" title="Hazırlığın her adımı için eksiksiz bir sistem" lead="Tek bir uygulamada, iki sınavın tüm ihtiyaçları. Her modül seçtiğin sınava göre şekillenir.">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{FEATURES.map(([Icon, t, d], i) => (
+            <SpotCard key={t} index={i % 3} className="group !p-6">
+              <motion.span whileHover={{ rotate: -8, scale: 1.12 }} transition={{ type: 'spring', stiffness: 300, damping: 14 }} className="mb-4 grid h-10 w-10 place-items-center rounded-2xl bg-accent/15 text-accent transition-colors group-hover:bg-accent group-hover:text-onaccent"><Icon size={20} strokeWidth={1.8} /></motion.span>
               <h3 className="text-lg font-semibold text-slate-50">{t}</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-400">{d}</p>
-            </motion.div>))}</div>
+            </SpotCard>))}</div>
         </Section>
 
         <Section id="hata" title="Her yanlışın bir nedeni var" lead="Yalnızca kaç yanlış yaptığını değil, neden yaptığını da kaydet. Auren, hangi hatayı en çok yaptığını ve hangi derste yoğunlaştığını gösterir.">
           <WhyDemo />
         </Section>
 
-        <Section id="hibrit" title="Tek hesap, iki sınav, sıfır karışıklık" lead="Sadece DGS’ye, sadece YKS’ye ya da ikisine birden hazırlanıyor olabilirsin. Panel, seçimine göre şekillenir ve istediğin an değiştirebilirsin.">
-          <div className="grid gap-4 md:grid-cols-3">{TRACK_CARDS.map(([id, t, items]) => (
-            <motion.div key={id} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className={clsx('card !p-6', id === 'BOTH' && '!border-accent/40')}>
+        <Section plain id="hibrit" title="Tek hesap, iki sınav, sıfır karışıklık" lead="Sadece DGS’ye, sadece YKS’ye ya da ikisine birden hazırlanıyor olabilirsin. Panel, seçimine göre şekillenir ve istediğin an değiştirebilirsin.">
+          <div className="grid gap-4 md:grid-cols-3">{TRACK_CARDS.map(([id, t, items], i) => (
+            <SpotCard key={id} index={i} className={clsx('!p-6', id === 'BOTH' && '!border-accent/40')}>
               <div className="flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-50">{t}</h3>{id === 'BOTH' && <span className="badge bg-accent/15 text-accent">Esnek</span>}</div>
               <ul className="mt-4 space-y-2.5">{items.map(i => <li key={i} className="flex gap-2.5 text-sm text-slate-300"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-accent" />{i}</li>)}</ul>
-            </motion.div>))}</div>
+            </SpotCard>))}</div>
         </Section>
 
         <Section id="hesapla" title="Net ve puan tahmini" lead="Sınavını seç, doğru ve yanlış sayılarını gir; netin ve yaklaşık puanın anında hesaplansın.">
           <Estimator />
         </Section>
 
-        <Section id="nasil" title="Nasıl çalışır?">
-          <ol className="grid gap-4 md:grid-cols-3">{STEPS.map(([n, t, d]) => (
-            <li key={n} className="card !p-6">
-              <span className="num grid h-9 w-9 place-items-center rounded-full bg-accent text-sm font-bold text-onaccent">{n}</span>
+        <Section plain id="nasil" title="Nasıl çalışır?">
+          <ol className="grid gap-4 md:grid-cols-3">{STEPS.map(([n, t, d], i) => (
+            <li key={n} className="contents"><SpotCard index={i} className="!p-6">
+              <span className="relative grid h-9 w-9 place-items-center">
+                <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-accent/30 [animation-duration:2.8s]" />
+                <span className="num relative grid h-9 w-9 place-items-center rounded-full bg-accent text-sm font-bold text-onaccent">{n}</span>
+              </span>
               <h3 className="mt-4 text-lg font-semibold text-slate-50">{t}</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-400">{d}</p>
-            </li>))}</ol>
+            </SpotCard></li>))}</ol>
         </Section>
 
         <Section id="sss" title="Sık sorulan sorular" className="max-w-3xl"><Faq /></Section>
 
         <section className="mx-auto w-full max-w-6xl px-4 pb-20" aria-labelledby="cta-h">
           <Reveal>
-            <div className="card !p-8 text-center md:!p-14">
+            <div className="card spot overflow-hidden !p-8 text-center md:!p-14" onPointerMove={trackPointer}>
+              <div aria-hidden="true" className="float-slow pointer-events-none absolute -top-24 left-1/2 -z-10 h-64 w-[34rem] max-w-full -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .22), transparent)' }} />
               <h2 id="cta-h" className="text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl">Hazırlığını bugün bir üst seviyeye taşı.</h2>
               <p className="mx-auto mt-3 max-w-md text-slate-400">Hesabını oluştur, sınavını seç; akıllı panelin hazır.</p>
               <div className="mt-7 flex flex-wrap justify-center gap-3"><Link to="/kayit" className="btn btn-shine !px-7 !py-3">Ücretsiz hesap aç</Link><Link to="/giris" className="btn-ghost !px-7 !py-3">Giriş yap</Link></div>
@@ -300,5 +369,6 @@ export default function Landing() {
         </div>
       </footer>
     </div>
+    </MotionConfig>
   );
 }
