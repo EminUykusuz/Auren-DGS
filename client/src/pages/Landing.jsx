@@ -29,7 +29,7 @@ const FAQ = [
   ['Netler', 'TYT ve AYT netlerim karışır mı?', 'Karışmaz. Karşılaştırma ve trend grafikleri TYT ile AYT için ayrı çalışır.'],
   ['Arkadaş', 'Arkadaşlarımla nasıl yarışırım?', 'Kullanıcı adıyla arkadaş ekle. Haftalık puan; seçili sınavdaki çalışma süren, çözdüğün soru sayısı ve deneme netlerinden oluşur.'],
   ['Puan', 'Puan tahmini kesin mi?', 'Hayır; yaklaşık bir göstergedir. Gerçek puan, sınavın zorluğuna ve adayların genel başarısına göre ÖSYM ya da MEB tarafından hesaplanır.'],
-  ['Dershane', 'Dershane olarak kullanabilir miyiz?', 'Evet. Kurum paneliyle logonuzla markalı giriş sayfası, sınıflar, Excel’den toplu öğrenci ekleme, haftalık ödev (Excel olarak indirilir) ve sınıf değiştirme önerisi alırsınız. Öğrenci hesaplarını siz açarsınız.'],
+  ['Dershane', 'Dershane olarak kullanabilir miyiz?', 'Evet. Kurum paneliyle logonuzla markalı giriş sayfası, sınıflar, Excel’den toplu öğrenci ekleme, kişiye özel ve sınıf ödevi (Excel ile toplu verilir, sonuçlar Excel olarak iner), duyuru panosu, geciken ya da neti düşen öğrenci uyarıları ve sınıf değiştirme önerisi alırsınız. Öğrenci hesaplarını siz açarsınız.'],
 ];
 
 const LD = {
@@ -304,7 +304,10 @@ function Kurum() {
     ['Logonuzla markalı giriş', 'Kurumunuzun adresi, logosu ve rengiyle öğrenci giriş sayfası.'],
     ['Excel ile toplu öğrenci', 'Listeyi yapıştırın; hesaplar ve giriş bilgileri tek seferde oluşur, tek tıkla yazdırılır.'],
     ['Sınıflar ve öğretmenler', 'Öğretmen yalnızca kendi sınıflarını görür. Sınıf değiştirme önerisi alırsınız.'],
-    ['Haftalık ödev', 'Sınıfa konu ve hedef verin, öğrenciler işaretlesin. Takip ve sonuç Excel olarak iner.'],
+    ['Sınıfa ve kişiye özel ödev', 'Her öğrenciye ayrı konu verin; Excel listesini sisteme okutun, ödevler öğrencilerin paneline tek tek düşsün. Sonuçlar Excel olarak iner.'],
+    ['Bitirdim onayı ve teslim günü', 'Öğrenci ödevi bitirdiğini onaylar; süre yetmezse yeni tarihi öğretmenle sistem üzerinden konuşur.'],
+    ['Duyuru panosu', 'Sınav günü, ders değişikliği gibi haberleri sınıfa ya da tüm kuruma yazın; kimin okuduğunu görün.'],
+    ['Uyarı listeleri', 'Uzun süredir girmeyen, neti düşen ve ödevi geciken öğrenciler otomatik listelenir; kiminle ilgileneceğinizi bilirsiniz.'],
   ];
   return (
     <section className="py-20 md:py-28" id="dershane" aria-labelledby="ct-h">

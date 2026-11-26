@@ -16,9 +16,10 @@ const esc = (v) => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt
 export function resetMailHtml(link, minutes) {
   const l = esc(link);
   return `<!doctype html><html lang="tr"><body style="margin:0;padding:0;background:#f3f4f6">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">Şifreni yenilemek için bağlantı ${minutes} dakika geçerli.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 12px"><tr><td align="center">
 <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2937">
-<tr><td style="background:#0f172a;padding:22px 28px;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.2px">Auren Study</td></tr>
+<tr><td style="background:#0f172a;border-top:4px solid #10b981;padding:20px 28px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="width:30px;height:30px;background:#10b981;border-radius:8px;text-align:center;color:#0f172a;font-size:17px;font-weight:800;line-height:30px">A</td><td style="padding-left:12px;color:#ffffff;font-size:19px;font-weight:700;letter-spacing:.2px">Auren Study</td></tr></table></td></tr>
 <tr><td style="padding:28px">
 <h1 style="margin:0 0 12px;font-size:20px;color:#111827">Şifreni yenile</h1>
 <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#374151">Hesabın için şifre sıfırlama isteği aldık. Aşağıdaki düğmeyle yeni şifreni belirleyebilirsin. Bağlantı <b>${minutes} dakika</b> geçerli.</p>
