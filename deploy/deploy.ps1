@@ -1,4 +1,4 @@
-# Auren API dağıtım betiği (Windows VDS, GitHub Actions self-hosted runner üzerinde çalışır).
+﻿# Auren API dağıtım betiği (Windows VDS, GitHub Actions self-hosted runner üzerinde çalışır).
 # Akış: yedekle → sunucu kodunu ve derlenmiş arayüzü (client-dist) kopyala (.env ve node_modules korunur) → npm ci → migrate → yeniden başlat → sağlık kontrolü.
 # Sağlık kontrolü başarısız olursa önceki sürüme otomatik döner ve iş başarısız sayılır.
 param(
@@ -81,6 +81,23 @@ try {
   Push-Location $srv
   npm ci --omit=dev --no-audit --no-fund
   if ($LASTEXITCODE -ne 0) { throw 'npm ci başarısız' }
+
+  # Migration'dan önce veritabanı yedeği (kod geri dönüşü şemayı geri almaz). En iyi çaba: yedek alınamazsa deploy durmaz, uyarır.
+  Step 'Veritabanı yedeği'
+  try {
+    $envFile = Join-Path $srv '.env'
+    $dbName = ((Get-Content $envFile | Where-Object { $_ -match '^\s*DB_NAME\s*=' }) -replace '^\s*DB_NAME\s*=\s*', '').Trim()
+    $sqlcmd = Get-Command sqlcmd -ErrorAction SilentlyContinue
+    if ($dbName -and $sqlcmd) {
+      $dbDir = Join-Path $AppDir 'backup\db'
+      New-Item -ItemType Directory -Force -Path $dbDir | Out-Null
+      $bakFile = Join-Path $dbDir ("$dbName-" + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.bak')
+      & $sqlcmd.Source -S localhost -E -C -b -Q "BACKUP DATABASE [$dbName] TO DISK=N'$bakFile' WITH INIT, CHECKSUM, COMPRESSION" | Out-Host
+      if ($LASTEXITCODE -ne 0) { Write-Host "UYARI: veritabanı yedeği alınamadı (kod $LASTEXITCODE); devam ediliyor." -ForegroundColor Yellow }
+      else { Get-ChildItem $dbDir -Filter "$dbName-*.bak" | Sort-Object LastWriteTime -Descending | Select-Object -Skip 10 | Remove-Item -Force -ErrorAction SilentlyContinue }
+      $global:LASTEXITCODE = 0
+    } else { Write-Host 'UYARI: sqlcmd ya da DB_NAME bulunamadı, veritabanı yedeği atlandı.' -ForegroundColor Yellow }
+  } catch { Write-Host "UYARI: veritabanı yedeği hatası: $_" -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 
   Step 'Veritabanı migrasyonları'
   npm run migrate
