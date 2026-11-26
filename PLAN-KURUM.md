@@ -21,15 +21,15 @@ Branch: `feature/kurum-paneli` (main'e dokunulmaz, push yok). Her faz ayrı comm
 ## Fazlar
 | # | Faz | İçerik | Durum |
 |---|---|---|---|
-| 0 | Plan + saf mantık modülleri | kullanıcı adı/şifre üretimi, CSV/Excel-yapıştır ayrıştırma, yetki yardımcıları + unit test | |
-| 1 | Altyapı | migration 009 (Institutions, Classes, TeacherClasses, ClassTransfers, Users rol/kurum/sınıf/StudentNo/MustChangePassword), requireAuth, requireStaff/Owner | |
-| 2 | Kurum + marka | admin: kurum oluştur; `/k/:slug` markalı giriş; logo yükle/servis; öğrenci uygulamasında logo | |
-| 3 | Sınıf + öğrenci | sınıf CRUD, tek tek ve **toplu (Excel yapıştır / CSV) öğrenci ekleme**, giriş bilgisi çıktısı (CSV), şifre sıfırlama, öğretmen hesapları | |
-| 4 | Sınıf değiştirme | tekli/toplu taşıma, geçmiş (ClassTransfers), sıralamaya göre öneri ("ilk N → A sınıfı") | |
-| 5 | Kurum denemeleri | öğretmen deneme tanımlar, sonuçları toplu yapıştırır → öğrencilerin Denemeler sayfasına düşer; sınıf sıralaması | |
-| 6 | Haftalık ödev | sınıfa ödev (konu, soru hedefi, bitiş), öğrenci işaretler, öğretmen takip eder | |
-| 7 | Yanlış defteri | fotoğraflı soru bazlı kayıt (istemcide sıkıştırma, DB'de saklama) | |
-| 8 | LGS | ayrı net kuralı (3 yanlış 1 doğru), ayrı müfredat/bölümler, `ExamTrack='LGS'` (diğerleriyle karışmaz) | |
+| 0 | Plan + saf mantık modülleri | kullanıcı adı/şifre üretimi, CSV/Excel-yapıştır ayrıştırma, yetki yardımcıları + unit test | YAZILDI (DB'de denenmedi) |
+| 1 | Altyapı | migration 009 (Institutions, Classes, TeacherClasses, ClassTransfers, Users rol/kurum/sınıf/StudentNo/MustChangePassword), requireAuth, requireStaff/Owner | YAZILDI (DB'de denenmedi) |
+| 2 | Kurum + marka | admin: kurum oluştur; `/k/:slug` markalı giriş; logo yükle/servis; öğrenci uygulamasında logo | YAZILDI (DB'de denenmedi) |
+| 3 | Sınıf + öğrenci | sınıf CRUD, tek tek ve **toplu (Excel yapıştır / CSV) öğrenci ekleme**, giriş bilgisi çıktısı (CSV), şifre sıfırlama, öğretmen hesapları | YAZILDI (DB'de denenmedi) |
+| 4 | Sınıf değiştirme | tekli/toplu taşıma, geçmiş (ClassTransfers), sıralamaya göre öneri ("ilk N → A sınıfı") | YAZILDI (DB'de denenmedi) |
+| 5 | Kurum denemeleri | öğretmen deneme tanımlar, sonuçları toplu yapıştırır → öğrencilerin Denemeler sayfasına düşer; sınıf sıralaması | YAPILMADI |
+| 6 | Haftalık ödev | sınıfa ödev (konu, soru hedefi, bitiş), öğrenci işaretler, öğretmen takip eder | YAPILMADI |
+| 7 | Yanlış defteri | fotoğraflı soru bazlı kayıt (istemcide sıkıştırma, DB'de saklama) | YAPILMADI |
+| 8 | LGS | ayrı net kuralı (3 yanlış 1 doğru), ayrı müfredat/bölümler, `ExamTrack='LGS'` (diğerleriyle karışmaz) | YAPILMADI |
 
 ## Excel kolaylaştırma
 - Excel'den hücreleri kopyala → kutuya yapıştır (sekmeyle ayrılmış) ya da `.csv` yükle.
@@ -37,9 +37,16 @@ Branch: `feature/kurum-paneli` (main'e dokunulmaz, push yok). Her faz ayrı comm
 - Şablon indir (`ogrenci-sablonu.csv`). Türkçe Excel `;` ayracı ve UTF-8 BOM desteklenir.
 - Sonuç: oluşturulan kullanıcı adı + geçici şifre listesi tek tıkla CSV indirilir (yazdırılıp dağıtılır).
 
+## Durum notu
+- Faz 0-4 kodlandı, commit'li. Faz 5-8 (kurum denemeleri, ödev, yanlış defteri, LGS) **başlanmadı**.
+- SQL Server geliştirme makinesinde kapalıydı: migration 009, kurum.js SQL'leri ve test/kurum.test.js **hiç çalıştırılmadı**.
+- Doğrulananlar: kurum-lib birim testleri (10/10), HTTP smoke (yetki kapıları 401, gövde limitleri, hesap bazlı giriş limiti), istemci `vite build`.
+- Doğrulanamayanlar: tüm SQL, arayüzün tarayıcıda görünüşü (tarayıcı bağlantısı yoktu).
+- Bilinen eksikler: kurum öğrencisinin Ayarlar sayfasında yer tutucu e-posta (@ogrenci.invalid) görünebilir; öğretmen/yönetici "ad düzenle" arayüzü yok (API var); öğrenci başına sınıf bilgisi öğrenci panelinde gösterilmiyor.
+
 ## Canlıya alma kontrol listesi (sabah sen)
 1. Branch'i incele, `server/migrations/009_institutions.sql` dosyasını oku.
 2. **DB yedeği al**, sonra `npm run migrate`.
-3. `cd server && npm test` (DB'ye karşı çalışır).
+3. `cd server && node --test test/kurum.test.js` sonra `npm test` (DB'ye karşı çalışır). İlk çalıştırmada SQL hataları çıkması olası; düzeltmeye hazırım.
 4. Admin ile bir deneme kurumu oluştur, akışı elle dene.
 5. Sonra main'e birleştir ve `YAYINLA.bat`.

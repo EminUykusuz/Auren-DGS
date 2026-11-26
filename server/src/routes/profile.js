@@ -55,6 +55,7 @@ r.put('/profile/mode', validate(z.object({ examMode: z.enum(EXAM_TYPES) }).stric
 
 // Hazırlanılan sınav türü: DGS | YKS | BOTH (hibrit). Tek sınav seçilince aktif mod da ona çekilir.
 r.put('/profile/track', validate(z.object({ examTrack: z.enum(['DGS', 'YKS', 'BOTH']) }).strict()), wrap(async (req, res) => {
+  if (req.institutionId) return res.status(403).json({ error: 'Sınav türünü kurumun yöneticisi belirler' });
   const t = req.body.examTrack, mode = t === 'BOTH' ? req.examMode : t;
   await query(`UPDATE dbo.Users SET ExamTrack=@t, ExamMode=@m WHERE Id=@id`, { t, m: mode, id: req.userId });
   res.json({ ok: true, examTrack: t, examMode: mode });
@@ -100,6 +101,7 @@ const delLimiter = rateLimit({ windowMs: 60 * 60_000, limit: 5, keyGenerator: re
   message: { error: 'Çok fazla deneme. Lütfen daha sonra tekrar dene.' } });
 r.post('/profile/delete-account', delLimiter, validate(z.object({ password: z.string().min(1).max(72) }).strict()), wrap(async (req, res) => {
   if (req.isAdmin) return res.status(403).json({ error: 'Yönetici hesabı buradan silinemez' });
+  if (req.institutionId) return res.status(403).json({ error: 'Kurum hesabı kurum yöneticisi tarafından yönetilir' });
   const [u] = await query(`SELECT PasswordHash FROM dbo.Users WHERE Id=@id`, { id: req.userId });
   if (!(await bcrypt.compare(req.body.password, u.PasswordHash))) return res.status(403).json({ error: 'Şifre yanlış' });
   await tx(async q => {
