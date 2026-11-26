@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { NavLink, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound } from 'lucide-react';
+import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound, ClipboardList } from 'lucide-react';
 import clsx from 'clsx';
 import { get, post, put, del, api } from '../lib/api.js';
 import { useAuth } from '../store.js';
@@ -12,13 +12,14 @@ import { Page, Item, Title, Stat, Bar } from '../components/ui.jsx';
 const Students = lazy(() => import('./KurumStudents.jsx'));
 const Placement = lazy(() => import('./KurumPlacement.jsx'));
 const Teachers = lazy(() => import('./KurumTeachers.jsx'));
+const Odev = lazy(() => import('./KurumOdev.jsx'));
 
 const Err = ({ children }) => children ? <p role="alert" className="rounded-2xl bg-red-500/10 px-3.5 py-2.5 text-xs text-red-300">{children}</p> : null;
 const Spin = () => <div className="flex justify-center py-10 text-slate-500" role="status"><Loader2 className="animate-spin" size={18} aria-label="Yükleniyor" /></div>;
 
 function Tabs({ owner }) {
   const tabs = [['/kurum', 'Genel', Users, true], ['/kurum/ogrenciler', 'Öğrenciler', GraduationCap], ['/kurum/siniflar', 'Sınıflar', School],
-    ['/kurum/yerlestirme', 'Sınıf değiştirme', ArrowRightLeft], ...(owner ? [['/kurum/ogretmenler', 'Öğretmenler', UserCheck]] : []),
+    ['/kurum/odev', 'Ödev', ClipboardList], ['/kurum/yerlestirme', 'Sınıf değiştirme', ArrowRightLeft], ...(owner ? [['/kurum/ogretmenler', 'Öğretmenler', UserCheck]] : []),
     ['/kurum/gecmis', 'Geçmiş', HistoryIcon], ...(owner ? [['/kurum/marka', 'Marka', Palette]] : [])];
   return (
     <Item className="glass-pill mx-auto flex w-fit max-w-full gap-1 overflow-x-auto p-1">
@@ -191,6 +192,7 @@ export default function Kurum() {
           <Route index element={<Overview />} />
           <Route path="ogrenciler" element={<Students />} />
           <Route path="siniflar" element={<Classes />} />
+          <Route path="odev" element={<Odev />} />
           <Route path="yerlestirme" element={<Placement />} />
           {owner && <Route path="ogretmenler" element={<Teachers />} />}
           <Route path="gecmis" element={<History />} />

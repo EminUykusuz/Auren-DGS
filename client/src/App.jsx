@@ -19,6 +19,7 @@ const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Legal = lazy(() => import('./pages/Legal.jsx'));
 const Admin = lazy(() => import('./pages/Admin.jsx'));
 const Kurum = lazy(() => import('./pages/Kurum.jsx'));
+const Odev = lazy(() => import('./pages/Odev.jsx'));
 
 export default function App() {
   const loc = useLocation();
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="/denemeler" element={<Exams />} />
         <Route path="/mufredat" element={<Curriculum />} />
         <Route path="/arkadaslar" element={<Friends />} />
+        {user.institution && <Route path="/odev" element={<Odev />} />}
         <Route path="/karsilastir" element={<Battle />} />
         <Route path="/karsilastir/:friendId" element={<Battle />} />
         <Route path="/ayarlar" element={<Settings />} />

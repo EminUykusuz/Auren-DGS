@@ -27,9 +27,9 @@ Branch: `feature/kurum-paneli` (main'e dokunulmaz, push yok). Her faz ayrı comm
 | 3 | Sınıf + öğrenci | sınıf CRUD, tek tek ve **toplu (Excel yapıştır / CSV) öğrenci ekleme**, giriş bilgisi çıktısı (CSV), şifre sıfırlama, öğretmen hesapları | YAZILDI (DB'de denenmedi) |
 | 4 | Sınıf değiştirme | tekli/toplu taşıma, geçmiş (ClassTransfers), sıralamaya göre öneri ("ilk N → A sınıfı") | YAZILDI (DB'de denenmedi) |
 | 5 | Kurum denemeleri | öğretmen deneme tanımlar, sonuçları toplu yapıştırır → öğrencilerin Denemeler sayfasına düşer; sınıf sıralaması | YAPILMADI |
-| 6 | Haftalık ödev | sınıfa ödev (konu, soru hedefi, bitiş), öğrenci işaretler, öğretmen takip eder | YAPILMADI |
+| 6 | Haftalık ödev | sınıfa ödev (konu, soru hedefi, bitiş), öğrenci işaretler, öğretmen takip eder | YAZILDI, DB üzerinde denenmedi (migration 011, `routes/odev.js`, Kurum → Ödev sekmesi, öğrenci → Ödevler; Excel kâğıdı/sonuç + xlsx/pdf ek) |
 | 7 | Yanlış defteri | fotoğraflı soru bazlı kayıt (istemcide sıkıştırma, DB'de saklama) | YAPILMADI |
-| 8 | LGS | ayrı net kuralı (3 yanlış 1 doğru), ayrı müfredat/bölümler, `ExamTrack='LGS'` (diğerleriyle karışmaz) | YAPILMADI |
+| 8 | LGS | ayrı net kuralı (3 yanlış 1 doğru), ayrı müfredat/bölümler, `ExamTrack='LGS'` (diğerleriyle karışmaz) | YAZILDI, DB üzerinde denenmedi (migration 010; 90 soru, 6 ders, 3:1 net) |
 
 ## Ek işler (gece 2)
 - **Landing** yeniden tasarlandı (optik cevap kâğıdı konsepti; Literata kendi sunucumuzdan; görseller `client/public/landing`, krediler altbilgide). Denetçi: 0 hata. Tarayıcıda canlı elle bakılmadı (yalnızca ekran görüntüleri).

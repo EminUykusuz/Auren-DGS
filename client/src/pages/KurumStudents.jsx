@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { UserPlus, FileSpreadsheet, Search, KeyRound, ArrowRightLeft, Download, Upload, Loader2, Ban, CircleCheck, TriangleAlert } from 'lucide-react';
+import { Pencil, Check, X, UserPlus, FileSpreadsheet, Search, KeyRound, ArrowRightLeft, Download, Upload, Loader2, Ban, CircleCheck, TriangleAlert } from 'lucide-react';
 import clsx from 'clsx';
 import { api, get, post } from '../lib/api.js';
 import { useAuth } from '../store.js';
@@ -124,6 +124,8 @@ export default function Students() {
     const out = await post('/kurum/students/transfer', { moves: [...sel].map(studentId => ({ studentId, toClassId: target === 'none' ? null : Number(target) })), reason: reason.trim() || undefined });
     setOk(`${out.moved} öğrenci taşındı${out.unchanged ? `, ${out.unchanged} zaten o sınıftaydı` : ''}.`); setSel(new Set()); setTarget(''); setReason(''); list.reload(); cls.reload();
   });
+  const [edit, setEdit] = useState(null);   // { id, fullName, studentNo }
+  const saveEdit = () => run(async () => { await api('PATCH', '/kurum/students/' + edit.id, { fullName: edit.fullName.trim(), studentNo: edit.studentNo.trim() || null }); setEdit(null); list.reload(); });
   const setDisabled = (s) => run(async () => { await api('PATCH', `/kurum/students/${s.id}`, { isDisabled: !s.isDisabled }); list.reload(); });
 
   return (<>
@@ -167,8 +169,13 @@ export default function Students() {
           <tbody>{students.map(s => (
             <tr key={s.id} className={clsx('border-t border-white/[0.05]', s.isDisabled && 'opacity-50')}>
               <td className="px-3 py-2"><input type="checkbox" className="!h-4 !w-4" checked={sel.has(s.id)} onChange={() => toggle(s.id)} aria-label={`${s.fullName} seç`} /></td>
-              <td className="px-3 py-2 text-slate-100">{s.fullName || '—'}</td><td className="px-3 py-2 font-mono text-xs">{s.username}</td>
-              <td className="px-3 py-2">{s.studentNo ?? '—'}</td><td className="px-3 py-2">{s.className ?? <span className="text-slate-500">Sınıfsız</span>}</td>
+              <td className="px-3 py-2 text-slate-100">{edit?.id === s.id
+                ? <input aria-label="Ad soyad" value={edit.fullName} onChange={e => setEdit({ ...edit, fullName: e.target.value })} maxLength={80} onKeyDown={e => { if (e.key === 'Enter' && edit.fullName.trim().length >= 3) saveEdit(); if (e.key === 'Escape') setEdit(null); }} autoFocus />
+                : <span className="inline-flex items-center gap-2">{s.fullName || '—'}<button className="text-slate-500 hover:text-slate-200" onClick={() => setEdit({ id: s.id, fullName: s.fullName ?? '', studentNo: s.studentNo ?? '' })} aria-label={s.fullName + ' adını düzenle'}><Pencil size={12} /></button></span>}</td>
+              <td className="px-3 py-2 font-mono text-xs">{s.username}</td>
+              <td className="px-3 py-2">{edit?.id === s.id
+                ? <span className="flex items-center gap-1"><input aria-label="Öğrenci no" className="!w-24" value={edit.studentNo} onChange={e => setEdit({ ...edit, studentNo: e.target.value })} maxLength={20} /><button className="btn !px-2 !py-1" disabled={busy || edit.fullName.trim().length < 3} onClick={saveEdit} aria-label="Kaydet"><Check size={13} /></button><button className="btn-ghost !px-2 !py-1" onClick={() => setEdit(null)} aria-label="Vazgeç"><X size={13} /></button></span>
+                : (s.studentNo ?? '—')}</td><td className="px-3 py-2">{s.className ?? <span className="text-slate-500">Sınıfsız</span>}</td>
               <td className="px-3 py-2">{s.mustChangePassword ? <span className="badge bg-amber-400/15 text-amber-300">giriş bekliyor</span> : when(s.lastLoginAt)}</td>
               <td className="px-3 py-2"><button className="btn-ghost !px-2.5 !py-1 text-xs" disabled={busy} onClick={() => setDisabled(s)} aria-label={s.isDisabled ? 'Hesabı etkinleştir' : 'Hesabı pasife al'}>
                 {s.isDisabled ? <><Ban size={12} />Pasif</> : <><CircleCheck size={12} className="text-accent" />Aktif</>}</button></td>

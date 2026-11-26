@@ -1,7 +1,7 @@
 import Logo from './Logo.jsx';
 import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Clock, Timer as TimerIcon, ClipboardCheck, BookOpen, Users, Swords, LogOut, ShieldCheck, Settings, Sun, Moon, PanelLeftClose, PanelLeftOpen, Building2 } from 'lucide-react';
+import { LayoutDashboard, Clock, Timer as TimerIcon, ClipboardCheck, BookOpen, Users, Swords, LogOut, ShieldCheck, Settings, Sun, Moon, PanelLeftClose, PanelLeftOpen, Building2, ClipboardList } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth, useExam } from '../store.js';
 import ModeSwitch from './ModeSwitch.jsx';
@@ -31,7 +31,7 @@ const nav = [
   ['/', 'Panel', LayoutDashboard], ['/calisma', 'Çalışma', Clock], ['/kronometre', 'Zamanlayıcı', TimerIcon], ['/denemeler', 'Denemeler', ClipboardCheck],
   ['/mufredat', 'Müfredat', BookOpen], ['/arkadaslar', 'Arkadaşlar', Users], ['/karsilastir', 'Karşılaştır', Swords],
 ];
-const titles = { '': 'Panel', calisma: 'Çalışma kaydı', kronometre: 'Zamanlayıcı', denemeler: 'Denemeler', mufredat: 'Müfredat ve güç analizi', arkadaslar: 'Arkadaşlar', karsilastir: 'Yüz yüze karşılaştırma', ayarlar: 'Ayarlar', admin: 'Yönetim', kurum: 'Kurum paneli' };
+const titles = { '': 'Panel', calisma: 'Çalışma kaydı', kronometre: 'Zamanlayıcı', denemeler: 'Denemeler', mufredat: 'Müfredat ve güç analizi', arkadaslar: 'Arkadaşlar', odev: 'Haftalık ödevler', karsilastir: 'Yüz yüze karşılaştırma', ayarlar: 'Ayarlar', admin: 'Yönetim', kurum: 'Kurum paneli' };
 
 export const Fallback = () => (
   <div className="min-h-[60vh]" role="status" aria-label="Yükleniyor">
@@ -72,7 +72,7 @@ export function Shell() {
   useEffect(() => { document.title = `${titles[seg] ?? 'Auren Study'} · Auren Study`; }, [seg, mode]);
   useEffect(() => { document.documentElement.dataset.exam = mode; }, [mode]);   // moda göre vurgu rengi (index.css)
   if (!user) return null;   // çıkış anında bu bileşen, App kaldırmadan önce bir kez daha çizilebilir
-  const base = staff ? [{ to: '/kurum', l: 'Kurum paneli', I: Building2, badge: 0 }] : nav.map(([to, l, I]) => ({ to, l, I, badge: to === '/arkadaslar' ? pending : 0 }));
+  const base = staff ? [{ to: '/kurum', l: 'Kurum paneli', I: Building2, badge: 0 }] : [...nav, ...(user.institution ? [['/odev', 'Ödevler', ClipboardList]] : [])].map(([to, l, I]) => ({ to, l, I, badge: to === '/arkadaslar' ? pending : 0 }));
   const items = [...base, ...(user.isAdmin ? [{ to: '/admin', l: 'Yönetim', I: ShieldCheck }] : [])];
   const inst = user.institution, logo = logoUrl(inst);
   const light = theme === 'light';
