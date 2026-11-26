@@ -29,21 +29,23 @@ r.get('/profile', wrap(async (req, res) => {
 const fullName = z.string().trim().max(80).regex(/^[\p{L}\p{M}][\p{L}\p{M} .'’-]*$/u, 'Ad soyad yalnızca harf, boşluk, nokta, kesme ve tire içerebilir').or(z.literal(''));
 r.put('/profile/account', validate(z.object({
   fullName, avatarUrl: z.string().refine(isAvatar, 'Geçersiz avatar').nullable(),
-  email: z.string().trim().toLowerCase().email().max(254), currentPassword: z.string().max(72).optional(),
+  // Kurum hesaplarında e-posta yoktur: alan hiç gönderilmez ve mevcut değer (NULL) korunur
+  email: z.string().trim().toLowerCase().email().max(254).optional(), currentPassword: z.string().max(72).optional(),
 }).strict()), wrap(async (req, res) => {
   const d = req.body;
   const [u] = await query(`SELECT Email, PasswordHash FROM dbo.Users WHERE Id=@id`, { id: req.userId });
-  if (d.email !== u.Email.toLowerCase()) {
+  const email = d.email === undefined ? u.Email : d.email;
+  if (d.email !== undefined && d.email !== (u.Email ?? '').toLowerCase()) {
     if (!d.currentPassword || !(await bcrypt.compare(d.currentPassword, u.PasswordHash))) return res.status(403).json({ error: 'E-postayı değiştirmek için mevcut şifreni doğru girmelisin' });
   }
   try {
     await query(`UPDATE dbo.Users SET FullName=@f, AvatarUrl=@a, Email=@e, ProfileUpdatedAt=SYSUTCDATETIME() WHERE Id=@id`,
-      { f: d.fullName || null, a: d.avatarUrl, e: d.email, id: req.userId });
+      { f: d.fullName || null, a: d.avatarUrl, e: email, id: req.userId });
   } catch (err) {
     if (err.number === 2627 || err.number === 2601) return res.status(409).json({ error: 'Bu e-posta başka bir hesapta kullanılıyor' });
     throw err;
   }
-  res.json({ ok: true, fullName: d.fullName, email: d.email, avatarUrl: d.avatarUrl });
+  res.json({ ok: true, fullName: d.fullName, email, avatarUrl: d.avatarUrl });
 }));
 
 // Kalıcı mod tercihi (navbar toggle): sunucuda saklanır, cihazlar arası senkron olur

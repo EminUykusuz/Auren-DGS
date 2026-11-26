@@ -95,15 +95,16 @@ function Track() {
 
 function Profile() {
   const user = useAuth(x => x.user); const patchUser = useAuth(x => x.patchUser);
-  const [f, setF] = useState({ fullName: user.fullName ?? '', email: user.email, avatarUrl: user.avatarUrl ?? null, currentPassword: '' });
+  const [f, setF] = useState({ fullName: user.fullName ?? '', email: user.email ?? '', avatarUrl: user.avatarUrl ?? null, currentPassword: '' });
+  const hasEmail = !!user.email;   // kurum hesaplarında e-posta yoktur
   const [state, setState] = useState('idle'); const [err, setErr] = useState('');
-  const emailChanged = f.email.trim().toLowerCase() !== user.email.toLowerCase();
+  const emailChanged = hasEmail && f.email.trim().toLowerCase() !== user.email.toLowerCase();
   const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
   const submit = async (e) => {
     e.preventDefault(); setErr(''); setState('saving');
     try {
-      const r = await put('/profile/account', { fullName: f.fullName, email: f.email, avatarUrl: f.avatarUrl, ...(emailChanged ? { currentPassword: f.currentPassword } : {}) });
-      patchUser({ fullName: r.fullName, email: r.email, avatarUrl: r.avatarUrl }); setF(p => ({ ...p, email: r.email, currentPassword: '' }));
+      const r = await put('/profile/account', { fullName: f.fullName, ...(hasEmail ? { email: f.email } : {}), avatarUrl: f.avatarUrl, ...(emailChanged ? { currentPassword: f.currentPassword } : {}) });
+      patchUser({ fullName: r.fullName, email: r.email, avatarUrl: r.avatarUrl }); setF(p => ({ ...p, email: r.email ?? '', currentPassword: '' }));
       setState('saved'); setTimeout(() => setState('idle'), 2500);
     } catch (x) { setErr(x.message); setState('idle'); }
   };
@@ -127,7 +128,7 @@ function Profile() {
         </fieldset>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2"><label htmlFor="pf">Ad soyad</label><input id="pf" maxLength={80} value={f.fullName} onChange={set('fullName')} placeholder="Örn. Ayşe Yılmaz" autoComplete="name" /></div>
-          <div className="sm:col-span-2"><label htmlFor="pe">E-posta</label><input id="pe" type="email" required maxLength={254} value={f.email} onChange={set('email')} autoComplete="email" /></div>
+          {hasEmail && <div className="sm:col-span-2"><label htmlFor="pe">E-posta</label><input id="pe" type="email" required maxLength={254} value={f.email} onChange={set('email')} autoComplete="email" /></div>}
           {emailChanged && <div className="sm:col-span-2"><label htmlFor="pp">Mevcut şifre <span className="text-slate-500">(e-posta değişimi için gerekli)</span></label><input id="pp" type="password" required maxLength={72} value={f.currentPassword} onChange={set('currentPassword')} autoComplete="current-password" /></div>}
         </div>
         <div className="flex items-center gap-3"><button className="btn" disabled={state === 'saving'}>Kaydet</button><span role="status" className="text-xs text-emerald-300">{state === 'saved' && 'Kaydedildi ✓'}</span></div>
