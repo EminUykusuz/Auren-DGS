@@ -80,7 +80,7 @@ export function Shell() {
   return (
     <div className="min-h-screen">
       <Ambient />
-      <aside className={clsx('card-fixed fixed left-4 top-4 z-30 hidden transition-[width] duration-300 md:block', collapsed ? 'w-[72px]' : 'w-56')}>
+      <aside className={clsx('card-fixed fixed left-4 top-4 z-30 hidden max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[32px] transition-[width] duration-300 md:block [scrollbar-width:none] [&::-webkit-scrollbar]:hidden', collapsed ? 'w-[72px]' : 'w-56')}>
         <div className="card !rounded-[32px] !p-3">
           <div className={clsx('flex items-center pb-3 pt-2', collapsed ? 'flex-col gap-2' : 'justify-between px-3')}>
             {collapsed ? <NavLink to="/ayarlar" aria-label="Profil"><Avatar name={user.username} url={user.avatarUrl} size={36} /></NavLink>
@@ -111,6 +111,7 @@ export function Shell() {
         {[...items, { to: '/ayarlar', l: 'Ayarlar', I: Settings }].map(({ to, l, I }) => (
           <NavLink key={to} to={to} end={to === '/' || to === '/admin'} aria-label={l} className={({ isActive }) => clsx('flex min-w-[44px] flex-1 items-center justify-center rounded-full p-2.5', isActive ? 'bg-white/15 text-white' : 'text-slate-400')}>
             <I size={20} strokeWidth={1.8} aria-hidden="true" /></NavLink>))}
+        <button type="button" onClick={logout} aria-label="Çıkış yap" className="flex min-w-[44px] flex-1 items-center justify-center rounded-full p-2.5 text-slate-400 active:bg-white/10"><LogOut size={20} strokeWidth={1.8} aria-hidden="true" /></button>
       </nav>
 
       <main className={clsx('mx-auto max-w-[1680px] px-4 pb-28 pt-6 transition-[padding] duration-300 md:pb-10 md:pr-6', collapsed ? 'md:pl-[6.5rem]' : 'md:pl-[15.5rem]')}>

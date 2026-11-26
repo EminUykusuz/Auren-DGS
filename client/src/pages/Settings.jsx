@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2, UserRound, Layers, TriangleAlert } from 'lucide-react';
+import { Check, Send, GraduationCap, Palette, ImagePlus, Trash2, UserRound, Layers, TriangleAlert, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import { get, put, post } from '../lib/api.js';
 import { useTheme, THEMES, BACKGROUNDS, fileToBg } from '../theme.js';
@@ -213,13 +213,19 @@ function DeleteAccount() {
   );
 }
 
+/* Telefonda kenar çubuğu yok: çıkış burada da erişilebilir */
+function Logout() {
+  const logout = useAuth(x => x.logout);
+  return (<Item className="card flex items-center justify-between gap-3"><div><h2 className="font-semibold text-slate-100">Oturumu kapat</h2><p className="text-sm text-slate-400">Bu cihazdaki oturumunu sonlandırır.</p></div><button type="button" onClick={logout} className="btn-ghost shrink-0"><LogOut size={16} aria-hidden="true" />Çıkış yap</button></Item>);
+}
+
 export default function Settings() {
   return (
     <Page>
       <Title>Ayarlar</Title>
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
         <div className="space-y-4"><Profile /><Track /><Appearance /><Target /><DeleteAccount /></div>
-        <div className="space-y-4"><SupportCard /><Feedback /></div>
+        <div className="space-y-4"><SupportCard /><Feedback /><Logout /></div>
       </div>
     </Page>
   );
