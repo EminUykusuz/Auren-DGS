@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Logo from '../components/Logo.jsx';
 import JsonLd from '../components/JsonLd.jsx';
 import LegalLinks from '../components/LegalLinks.jsx';
 import { SITE, DEFAULT_DESC } from '../hooks/useSEO.js';
@@ -185,7 +186,7 @@ export default function Landing() {
       <JsonLd data={LD} />
       <a href="#ana" className="ln-sr">İçeriğe geç</a>
       <header className="ln-top">
-        <Link to="/" className="ln-mark" aria-label="Auren ana sayfa">Auren</Link>
+        <Link to="/" className="ln-mark" aria-label="Auren ana sayfa" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Logo size={30} leg="#2c3620" dot="#1c1c1c" />Auren</Link>
         <nav className="ln-links" aria-label="Ana menü"><a href="#hesapla">Net hesabı</a><a href="#ozellikler">Özellikler</a><a href="#dershane">Dershaneler</a><a href="#sss">SSS</a></nav>
         <div className="ln-top-act"><Link to="/giris" className="ln-btn plain">Giriş</Link></div>
       </header>

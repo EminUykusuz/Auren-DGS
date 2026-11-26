@@ -1,3 +1,4 @@
+import Logo from './Logo.jsx';
 import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Clock, Timer as TimerIcon, ClipboardCheck, BookOpen, Users, Swords, LogOut, ShieldCheck, Settings, Sun, Moon, PanelLeftClose, PanelLeftOpen, Building2 } from 'lucide-react';
@@ -85,7 +86,7 @@ export function Shell() {
             {collapsed ? <NavLink to="/ayarlar" aria-label="Profil"><Avatar name={user.username} url={user.avatarUrl} size={36} /></NavLink>
               : <div className="min-w-0">
                   {logo && <img src={logo} alt={inst.name} className="mb-2 max-h-10 max-w-full rounded-lg object-contain" />}
-                  <div className="truncate text-lg font-bold tracking-tight text-white">{staff || inst ? (inst?.name ?? 'Auren') : <>Auren <span className="text-accent">{mode}</span></>}</div><NavLink to="/ayarlar" className="mt-1 flex items-center gap-2 truncate text-xs text-slate-400 hover:text-slate-200"><Avatar name={user.username} url={user.avatarUrl} size={20} /><span className="truncate">{user.fullName || '@' + user.username}</span></NavLink></div>}
+                  <div className="flex items-center gap-2 truncate text-lg font-bold tracking-tight text-white">{!inst && <Logo size={26} leg="rgb(var(--accent))" />}<span className="truncate">{staff || inst ? (inst?.name ?? 'Auren') : <>Auren <span className="text-accent">{mode}</span></>}</span></div><NavLink to="/ayarlar" className="mt-1 flex items-center gap-2 truncate text-xs text-slate-400 hover:text-slate-200"><Avatar name={user.username} url={user.avatarUrl} size={20} /><span className="truncate">{user.fullName || '@' + user.username}</span></NavLink></div>}
             <button onClick={toggle} aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'} aria-expanded={!collapsed} className="rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-slate-200">
               {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
           </div>
