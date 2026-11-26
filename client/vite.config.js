@@ -14,6 +14,8 @@ export default defineConfig({
         // Ağır bağımlılıklar ayrı, uzun süre önbelleklenebilir parçalara bölünür
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
+          // clsx hem uygulamada hem recharts'ta kullanılır; grafik paketine düşerse giriş paketi 450 KB'lık grafik kodunu her ziyaretçiye ön yükler
+          if (/[\\/]clsx[\\/]/.test(id)) return 'vendor-react';
           if (/[\\/](recharts|d3-[^\\/]+|victory-vendor|internmap|decimal\.js-light|lodash[^\\/]*|recharts-scale|fast-equals|eventemitter3|tiny-invariant|react-smooth|react-transition-group)[\\/]/.test(id)) return 'vendor-charts';
           if (/[\\/]framer-motion[\\/]|[\\/]motion-dom[\\/]|[\\/]motion-utils[\\/]/.test(id)) return 'vendor-motion';
           if (/[\\/]lucide-react[\\/]/.test(id)) return 'vendor-icons';
