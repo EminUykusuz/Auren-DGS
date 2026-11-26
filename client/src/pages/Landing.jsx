@@ -315,6 +315,7 @@ function Kurum() {
               <p className="stat-label mb-4 !text-accent">Dershaneler için</p>
               <h2 id="ct-h" className="text-4xl font-semibold leading-[1.05] tracking-[-0.03em] text-slate-50 md:text-5xl">Kurum paneli.</h2>
               <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-slate-400">Öğrenci hesaplarını siz açarsınız; öğrenciler yalnızca kendi kurumlarındakilerle görünür.</p>
+              <Link to="/kurum-giris" className="btn-ghost mt-5">Kurum girişi yap <ArrowRight size={15} /></Link>
               <ul className="mt-8 grid gap-5 sm:grid-cols-2" data-stagger>
                 {list.map(([t, d]) => (
                   <li key={t} data-item className="border-t border-white/10 pt-4"><b className="text-[15px] font-semibold text-slate-100">{t}</b><p className="mt-1 text-sm leading-relaxed text-slate-400">{d}</p></li>))}
@@ -432,7 +433,7 @@ export default function Landing() {
           <nav className="hidden items-center gap-1 md:flex" aria-label="Ana menü">
             {[['#hesapla', 'Net hesabı'], ['#ozellikler', 'Özellikler'], ['#dershane', 'Dershaneler'], ['#sss', 'SSS']].map(([h, l]) => <a key={h} href={h} className="rounded-full px-3.5 py-1.5 text-sm text-slate-300 transition hover:bg-white/[0.07] hover:text-slate-50">{l}</a>)}
           </nav>
-          <div className="flex items-center gap-1.5"><Link to="/giris" className="btn-ghost !py-1.5">Giriş</Link><Link to="/kayit" className="btn !py-1.5">Kayıt ol</Link></div>
+          <div className="flex items-center gap-1.5"><Link to="/kurum-giris" className="btn-ghost !py-1.5">Kurum girişi</Link><Link to="/giris" className="btn-ghost hidden !py-1.5 sm:inline-flex">Giriş</Link><Link to="/kayit" className="btn !py-1.5">Kayıt ol</Link></div>
         </div>
       </header>
 
@@ -479,7 +480,7 @@ export default function Landing() {
             <p className="mt-2 max-w-sm text-sm text-slate-400">DGS, YKS ve LGS hazırlığı için çalışma ve deneme takip sistemi.</p>
           </div>
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-300">
-            <li><Link to="/giris" className="hover:text-accent">Giriş yap</Link></li><li><Link to="/kayit" className="hover:text-accent">Kayıt ol</Link></li><li><a href="#dershane" className="hover:text-accent">Dershaneler için</a></li>
+            <li><Link to="/giris" className="hover:text-accent">Giriş yap</Link></li><li><Link to="/kurum-giris" className="hover:text-accent">Kurum girişi</Link></li><li><Link to="/kayit" className="hover:text-accent">Kayıt ol</Link></li><li><a href="#dershane" className="hover:text-accent">Dershaneler için</a></li>
             <li><LegalLinks /></li>
           </ul>
         </div>

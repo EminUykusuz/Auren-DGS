@@ -91,7 +91,7 @@ export function Login({ brand }) {
   useBrandColor(brand?.color);
   return (
     <Frame brand={brand} title={brand ? 'Giriş yap' : 'Tekrar hoş geldin'} subtitle={brand ? 'Kurumunun verdiği kullanıcı adı ve şifreyle gir.' : 'Hesabına giriş yap ve çalışmana devam et.'}
-      footer={brand ? <div className="text-xs text-slate-500">Şifreni unuttuysan öğretmeninden yeni şifre iste.</div> : <><Link2 to="/sifremi-unuttum">Şifremi unuttum</Link2><div>Hesabın yok mu? <Link2 to="/kayit">Kayıt ol</Link2></div></>}>
+      footer={brand ? <div className="text-xs text-slate-500">Şifreni unuttuysan öğretmeninden yeni şifre iste.</div> : <><Link2 to="/sifremi-unuttum">Şifremi unuttum</Link2><div>Hesabın yok mu? <Link2 to="/kayit">Kayıt ol</Link2></div><div>Dershane veya okul hesabın mı var? <Link2 to="/kurum-giris">Kurum girişi</Link2></div></>}>
       <Form f={f}>
         <Field id="identifier" label="Kullanıcı adı veya e-posta"><input id="identifier" name="identifier" required autoComplete="username" /></Field>
         <Field id="password" label="Şifre"><Password id="password" autoComplete="current-password" /></Field>
@@ -227,6 +227,26 @@ export function Reset() {
   );
 }
 
+
+// /kurum-giris — kurum kodunu yazan kurum yöneticisi/öğretmen/öğrenci kendi kurumunun giriş sayfasına gider
+export function KurumGiris() {
+  const nav = useNavigate();
+  const f = useForm(async d => {
+    const slug = String(d.kod ?? '').trim().toLowerCase().replace(/^.*\/k\//, '').replace(/[^a-z0-9-]/g, '');
+    if (!slug) throw new Error('Kurum kodunu yaz.');
+    try { await get('/kurum/brand/' + encodeURIComponent(slug)); } catch { throw new Error('Bu kodla bir kurum bulunamadı. Kodu kurumundan öğren.'); }
+    nav('/k/' + slug);
+  });
+  return (
+    <Frame title="Kurum girişi" subtitle="Kurumunun kodunu yaz; kurumuna özel giriş sayfası açılır."
+      footer={<div>Bireysel hesabın mı var? <Link2 to="/giris">Giriş yap</Link2></div>}>
+      <Form f={f}>
+        <Field id="kod" label="Kurum kodu" hint="Örnek: demo (aurenstudy.com.tr/k/demo adresindeki son kısım)"><input id="kod" name="kod" required autoComplete="organization" autoCapitalize="none" spellCheck="false" /></Field>
+        <Msg {...f} /><Submit busy={f.busy}>Devam et</Submit>
+      </Form>
+    </Frame>
+  );
+}
 
 // /k/:slug — kuruma özel giriş (logo, ad, renk)
 export function KurumLogin() {

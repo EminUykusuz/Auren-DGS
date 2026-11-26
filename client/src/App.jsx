@@ -4,7 +4,7 @@ import { useAuth, useExam } from './store.js';
 import { Shell, Ambient } from './components/Layout.jsx';
 import RouteSEO from './components/RouteSEO.jsx';
 import { LEGAL_DOCS } from './lib/legal-docs.js';
-import { Login, Register, Forgot, Reset, KurumLogin, ChangePassword } from './pages/AuthPages.jsx';
+import { Login, Register, Forgot, Reset, KurumLogin, KurumGiris, ChangePassword } from './pages/AuthPages.jsx';
 import { isStaff } from './lib/kurum.js';
 
 const Landing = lazy(() => import('./pages/Landing.jsx'));
@@ -34,6 +34,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Suspense fallback={null}><Landing /></Suspense>} />
         <Route path="/giris" element={<Login />} />
+        <Route path="/kurum-giris" element={<KurumGiris />} />
         <Route path="/k/:slug" element={<KurumLogin />} />
         <Route path="/kayit" element={<Register />} />
         <Route path="/sifremi-unuttum" element={<Forgot />} />

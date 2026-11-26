@@ -8,7 +8,7 @@ const PAGES = {
   ...Object.fromEntries(Object.entries(LEGAL_TITLES).map(([k, t]) => ['/' + k, { title: `${t} – Auren Study`, description: `Auren Study ${t}. Verilerinin nasıl işlendiğini ve haklarını öğren.` }])),
 };
 const NOINDEX = {
-  '/giris': 'Giriş yap – Auren Study', '/kayit': 'Kayıt ol – Auren Study', '/sifremi-unuttum': 'Şifremi unuttum – Auren Study', '/reset-password': 'Şifre sıfırla – Auren Study',
+  '/giris': 'Giriş yap – Auren Study', '/kurum-giris': 'Kurum girişi – Auren Study','/kayit': 'Kayıt ol – Auren Study', '/sifremi-unuttum': 'Şifremi unuttum – Auren Study', '/reset-password': 'Şifre sıfırla – Auren Study',
 };
 
 // Giriş yapmış kullanıcının "/" yolu panel (Dashboard); landing yalnızca oturumsuz görünür → user ile birlikte verilir
