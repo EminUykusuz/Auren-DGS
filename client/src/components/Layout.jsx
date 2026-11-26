@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Clock, Timer as TimerIcon, ClipboardCheck, BookOpen, Users, Swords, LogOut, ShieldCheck, Settings, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Clock, Timer as TimerIcon, ClipboardCheck, BookOpen, Users, Swords, LogOut, ShieldCheck, Settings, Sun, Moon, PanelLeftClose, PanelLeftOpen, Building2 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth, useExam } from '../store.js';
 import ModeSwitch from './ModeSwitch.jsx';
@@ -9,6 +9,7 @@ import { useTheme, bgCss } from '../theme.js';
 import { get } from '../lib/api.js';
 import { usePoll } from '../lib/poll.js';
 import Credit from './Credit.jsx';
+import { isStaff, logoUrl, useBrandColor } from '../lib/kurum.js';
 
 // Statik ortam ışığı (animasyonsuz); renkler temadan gelir, "Işıkları kapat" ile gizlenir
 const glow = (n) => `radial-gradient(closest-side, rgb(var(--glow-${n}) / var(--glow-${n}-o)), rgb(var(--glow-${n}) / 0))`;
@@ -29,7 +30,7 @@ const nav = [
   ['/', 'Panel', LayoutDashboard], ['/calisma', 'Çalışma', Clock], ['/kronometre', 'Zamanlayıcı', TimerIcon], ['/denemeler', 'Denemeler', ClipboardCheck],
   ['/mufredat', 'Müfredat', BookOpen], ['/arkadaslar', 'Arkadaşlar', Users], ['/karsilastir', 'Karşılaştır', Swords],
 ];
-const titles = { '': 'Panel', calisma: 'Çalışma kaydı', kronometre: 'Zamanlayıcı', denemeler: 'Denemeler', mufredat: 'Müfredat ve güç analizi', arkadaslar: 'Arkadaşlar', karsilastir: 'Yüz yüze karşılaştırma', ayarlar: 'Ayarlar', admin: 'Yönetim' };
+const titles = { '': 'Panel', calisma: 'Çalışma kaydı', kronometre: 'Zamanlayıcı', denemeler: 'Denemeler', mufredat: 'Müfredat ve güç analizi', arkadaslar: 'Arkadaşlar', karsilastir: 'Yüz yüze karşılaştırma', ayarlar: 'Ayarlar', admin: 'Yönetim', kurum: 'Kurum paneli' };
 
 export const Fallback = () => (
   <div className="min-h-[60vh]" role="status" aria-label="Yükleniyor">
@@ -63,12 +64,16 @@ export function Shell() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('dgs_nav') !== 'open');   // varsayılan: simge dock'u
   const toggle = () => setCollapsed(c => { localStorage.setItem('dgs_nav', c ? 'open' : 'closed'); return !c; });
   const [pending, setPending] = useState(0);
-  usePoll(() => get('/friends').then(r => setPending(r.incoming.length)).catch(() => {}), 30000);
+  const staff = isStaff(user);
+  useBrandColor(user?.institution?.color);   // kurum rengi vurgu rengini geçersiz kılar
+  usePoll(() => { if (!staff) get('/friends').then(r => setPending(r.incoming.length)).catch(() => {}); }, 30000);
   const seg = loc.pathname.split('/')[1] ?? '';
   useEffect(() => { document.title = `${titles[seg] ?? 'Auren ' + mode} · Auren ${mode}`; }, [seg, mode]);
   useEffect(() => { document.documentElement.dataset.exam = mode; }, [mode]);   // moda göre vurgu rengi (index.css)
   if (!user) return null;   // çıkış anında bu bileşen, App kaldırmadan önce bir kez daha çizilebilir
-  const items = [...nav.map(([to, l, I]) => ({ to, l, I, badge: to === '/arkadaslar' ? pending : 0 })), ...(user.isAdmin ? [{ to: '/admin', l: 'Yönetim', I: ShieldCheck }] : [])];
+  const base = staff ? [{ to: '/kurum', l: 'Kurum paneli', I: Building2, badge: 0 }] : nav.map(([to, l, I]) => ({ to, l, I, badge: to === '/arkadaslar' ? pending : 0 }));
+  const items = [...base, ...(user.isAdmin ? [{ to: '/admin', l: 'Yönetim', I: ShieldCheck }] : [])];
+  const inst = user.institution, logo = logoUrl(inst);
   const light = theme === 'light';
 
   return (
@@ -78,7 +83,9 @@ export function Shell() {
         <div className="card !rounded-[32px] !p-3">
           <div className={clsx('flex items-center pb-3 pt-2', collapsed ? 'flex-col gap-2' : 'justify-between px-3')}>
             {collapsed ? <NavLink to="/ayarlar" aria-label="Profil"><Avatar name={user.username} url={user.avatarUrl} size={36} /></NavLink>
-              : <div className="min-w-0"><div className="text-lg font-bold tracking-tight text-white">Auren <span className="text-accent">{mode}</span></div><NavLink to="/ayarlar" className="mt-1 flex items-center gap-2 truncate text-xs text-slate-400 hover:text-slate-200"><Avatar name={user.username} url={user.avatarUrl} size={20} /><span className="truncate">{user.fullName || '@' + user.username}</span></NavLink></div>}
+              : <div className="min-w-0">
+                  {logo && <img src={logo} alt={inst.name} className="mb-2 max-h-10 max-w-full rounded-lg object-contain" />}
+                  <div className="truncate text-lg font-bold tracking-tight text-white">{staff || inst ? (inst?.name ?? 'Auren') : <>Auren <span className="text-accent">{mode}</span></>}</div><NavLink to="/ayarlar" className="mt-1 flex items-center gap-2 truncate text-xs text-slate-400 hover:text-slate-200"><Avatar name={user.username} url={user.avatarUrl} size={20} /><span className="truncate">{user.fullName || '@' + user.username}</span></NavLink></div>}
             <button onClick={toggle} aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'} aria-expanded={!collapsed} className="rounded-xl p-2 text-slate-400 transition hover:bg-white/5 hover:text-slate-200">
               {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
           </div>
@@ -107,8 +114,9 @@ export function Shell() {
 
       <main className={clsx('mx-auto max-w-[1680px] px-4 pb-28 pt-6 transition-[padding] duration-300 md:pb-10 md:pr-6', collapsed ? 'md:pl-[6.5rem]' : 'md:pl-[15.5rem]')}>
         <div className="sticky top-3 z-20 -mt-1 mb-4 flex items-center justify-between gap-3">
+          {staff ? <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">{inst?.name}</span><span aria-hidden="true">·</span><span>Kurum paneli</span></div> : <>
           <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">Auren <span className="text-accent">{mode}</span></span><span aria-hidden="true">·</span><span>{mode === 'DGS' ? 'Dikey Geçiş Sınavı' : 'TYT · AYT'}</span></div>
-          {user.examTrack === 'BOTH' ? <ModeSwitch className="ml-auto" /> : <span className="badge ml-auto bg-accent/15 text-accent">{mode} hesabı</span>}
+          {user.examTrack === 'BOTH' ? <ModeSwitch className="ml-auto" /> : <span className="badge ml-auto bg-accent/15 text-accent">{mode} hesabı</span>}</>}
         </div>
         <div key={seg + mode + part} className="fade-in"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>
         <Credit />

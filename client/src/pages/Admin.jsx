@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { NavLink, Routes, Route, Navigate } from 'react-router-dom';
-import { Users, Activity, Gauge, ShieldCheck, ShieldOff, Ban, Trash2, UserPlus, LogIn, ClipboardCheck, BookOpen, Handshake, Server, Cpu, Clock3, KeyRound, Search, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { Users, Activity, Gauge, ShieldCheck, ShieldOff, Ban, Trash2, UserPlus, LogIn, ClipboardCheck, BookOpen, Handshake, Server, Cpu, Clock3, KeyRound, Search, ChevronLeft, ChevronRight, MessageSquare, Building2 } from 'lucide-react';
 import { BarChart, Bar as RBar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import clsx from 'clsx';
 import { api, get, fmt } from '../lib/api.js';
 import { useAuth } from '../store.js';
 import { Page, Item, Title, Stat, chartTip } from '../components/ui.jsx';
+const InstitutionsTab = lazy(() => import('./KurumAdmin.jsx'));
 
-const tabs = [['/admin', 'Genel', Gauge, true], ['/admin/kullanicilar', 'Kullanıcılar', Users], ['/admin/etkinlik', 'Etkinlik', Activity], ['/admin/geri-bildirim', 'Geri bildirim', MessageSquare]];
+const tabs = [['/admin', 'Genel', Gauge, true], ['/admin/kullanicilar', 'Kullanıcılar', Users], ['/admin/etkinlik', 'Etkinlik', Activity], ['/admin/geri-bildirim', 'Geri bildirim', MessageSquare], ['/admin/kurumlar', 'Kurumlar', Building2]];
 
 function Tabs() {
   return (
@@ -165,6 +166,7 @@ export default function Admin() {
         <Route path="kullanicilar" element={<UsersTab />} />
         <Route path="etkinlik" element={<ActivityTab />} />
         <Route path="geri-bildirim" element={<FeedbackTab />} />
+        <Route path="kurumlar" element={<Suspense fallback={null}><InstitutionsTab /></Suspense>} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>
     </Page>

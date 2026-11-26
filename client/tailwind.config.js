@@ -9,7 +9,7 @@ export default {
     extend: {
       colors: {
         slate, white: v('fg'),                // white/10 gibi örtüler açık temada koyu örtüye döner
-        obsidian: v('bg'), onaccent: '#090A0F',
+        obsidian: v('bg'), onaccent: 'rgb(var(--onaccent, 9 10 15) / <alpha-value>)',
         accent: v('accent'), cyan2: v('cyan2'),
       },
       fontFamily: { sans: ['Inter', '-apple-system', 'SF Pro Display', 'Segoe UI', 'system-ui', 'sans-serif'] },

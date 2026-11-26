@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, Check, Eye, EyeOff, Loader2, Moon, Sun, X } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth, useExam } from '../store.js';
 import { useTheme } from '../theme.js';
-import { post } from '../lib/api.js';
+import { get, post } from '../lib/api.js';
+import { logoUrl, useBrandColor } from '../lib/kurum.js';
 import TrackPicker from '../components/TrackPicker.jsx';
+import { Ambient } from '../components/Layout.jsx';
 
 const spring = { type: 'spring', stiffness: 260, damping: 26 };
 const list = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.12 } } };
 const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: spring } };
 
 // Giriş / kayıt çerçevesi: panelle aynı cam kart, aynı vurgu rengi ve tema; kart yumuşakça yerine oturur
-function Frame({ title, subtitle, children, footer }) {
+export function Frame({ title, subtitle, children, footer, brand, hideHome }) {
   const { theme, toggleMode } = useTheme(); const light = theme === 'light';
   return (
     <div className="auth-page relative flex min-h-screen flex-col px-4 py-4 sm:py-5" style={{ minHeight: '100dvh' }}>
@@ -22,13 +24,15 @@ function Frame({ title, subtitle, children, footer }) {
         <div className="float-slow absolute left-1/2 top-1/3 h-[360px] w-[360px] sm:h-[520px] sm:w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .16), transparent)' }} />
       </div>
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
-        <Link to="/" className="group inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-slate-100"><ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />Ana sayfa</Link>
+        {hideHome ? <span /> : <Link to="/" className="group inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-slate-100"><ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />Ana sayfa</Link>}
         <motion.button whileTap={{ scale: 0.9, rotate: 15 }} type="button" onClick={toggleMode} aria-label={light ? 'Koyu temaya geç' : 'Açık temaya geç'} className="btn-ghost !px-3 !py-2">{light ? <Moon size={16} /> : <Sun size={16} />}</motion.button>
       </div>
       <div className="flex flex-1 items-center justify-center py-5 sm:py-8">
         <motion.div initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring, stiffness: 180 }} className="card w-full max-w-md !p-5 sm:!p-7">
           <motion.div variants={list} initial="hidden" animate="show">
-            <motion.div variants={item} className="mb-6 text-xl font-bold text-slate-100">Auren</motion.div>
+            <motion.div variants={item} className="mb-6 flex items-center gap-3 text-xl font-bold text-slate-100">
+              {brand ? (<>{logoUrl(brand) && <img src={logoUrl(brand)} alt="" className="h-10 max-w-[140px] rounded-lg object-contain" />}<span className="truncate">{brand.name}</span></>) : 'Auren'}
+            </motion.div>
             <motion.h1 variants={item} className="text-2xl font-semibold tracking-tight text-slate-50">{title}</motion.h1>
             <motion.p variants={item} className="mb-5 mt-1.5 min-h-[1.25rem] text-sm text-slate-400">{subtitle}</motion.p>
             {children}
@@ -40,7 +44,7 @@ function Frame({ title, subtitle, children, footer }) {
   );
 }
 
-function useForm(action) {
+export function useForm(action) {
   const [err, setErr] = useState(''); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false); const [shaking, setShaking] = useState(false);
   const submit = async (e) => {
     e.preventDefault(); setErr(''); setBusy(true);
@@ -49,7 +53,7 @@ function useForm(action) {
   };
   return { err, msg, busy, shaking, submit };
 }
-const Msg = ({ err, msg }) => (
+export const Msg = ({ err, msg }) => (
   <AnimatePresence initial={false}>
     {err && <motion.p key="e" role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden rounded-2xl bg-red-500/10 px-3.5 py-2.5 text-xs text-red-300">{err}</motion.p>}
     {msg && <motion.p key="m" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden rounded-2xl bg-accent/10 px-3.5 py-2.5 text-xs text-emerald-300">{msg}</motion.p>}
@@ -58,11 +62,11 @@ const Msg = ({ err, msg }) => (
 const Link2 = ({ to, children }) => <Link className="font-medium text-accent underline-offset-4 hover:underline" to={to}>{children}</Link>;
 
 // Form alanı: odaklanınca etiket vurgu rengine döner
-const Field = ({ id, label, hint, children }) => (
+export const Field = ({ id, label, hint, children }) => (
   <motion.div variants={item} className="group"><label htmlFor={id} className="transition-colors group-focus-within:text-accent">{label}</label>{children}{hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}</motion.div>
 );
 
-function Password({ id, autoComplete, strength, ...rest }) {
+export function Password({ id, autoComplete, strength, ...rest }) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -72,21 +76,22 @@ function Password({ id, autoComplete, strength, ...rest }) {
   );
 }
 
-const Submit = ({ busy, children }) => (
+export const Submit = ({ busy, children }) => (
   <motion.button variants={item} whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} className="btn btn-shine w-full" disabled={busy}>
     {busy ? <Loader2 size={16} className="animate-spin" aria-label="Gönderiliyor" /> : children}
   </motion.button>
 );
 
 // Hata olunca form hafifçe sallanır
-const Form = ({ f, children }) => <form onSubmit={f.submit} className={clsx('space-y-4', f.shaking && 'animate-shake')}>{children}</form>;
+export const Form = ({ f, children }) => <form onSubmit={f.submit} className={clsx('space-y-4', f.shaking && 'animate-shake')}>{children}</form>;
 
-export function Login() {
+export function Login({ brand }) {
   const { login } = useAuth(); const nav = useNavigate();
   const f = useForm(async d => { await login(d.identifier, d.password); nav('/'); });
+  useBrandColor(brand?.color);
   return (
-    <Frame title="Tekrar hoş geldin" subtitle="Hesabına giriş yap ve çalışmana devam et."
-      footer={<><Link2 to="/sifremi-unuttum">Şifremi unuttum</Link2><div>Hesabın yok mu? <Link2 to="/kayit">Kayıt ol</Link2></div></>}>
+    <Frame brand={brand} title={brand ? 'Giriş yap' : 'Tekrar hoş geldin'} subtitle={brand ? 'Kurumunun verdiği kullanıcı adı ve şifreyle gir.' : 'Hesabına giriş yap ve çalışmana devam et.'}
+      footer={brand ? <div className="text-xs text-slate-500">Şifreni unuttuysan öğretmeninden yeni şifre iste.</div> : <><Link2 to="/sifremi-unuttum">Şifremi unuttum</Link2><div>Hesabın yok mu? <Link2 to="/kayit">Kayıt ol</Link2></div></>}>
       <Form f={f}>
         <Field id="identifier" label="Kullanıcı adı veya e-posta"><input id="identifier" name="identifier" required autoComplete="username" /></Field>
         <Field id="password" label="Şifre"><Password id="password" autoComplete="current-password" /></Field>
@@ -219,5 +224,46 @@ export function Reset() {
         <Msg {...f} /><Submit busy={f.busy}>Şifreyi güncelle</Submit>
       </Form>
     </Frame>
+  );
+}
+
+
+// /k/:slug — kuruma özel giriş (logo, ad, renk)
+export function KurumLogin() {
+  const { slug } = useParams();
+  const [brand, setBrand] = useState(undefined);   // undefined: yükleniyor, null: bulunamadı
+  useEffect(() => { let on = true; get('/kurum/brand/' + encodeURIComponent(slug)).then(b => on && setBrand(b)).catch(() => on && setBrand(null)); return () => { on = false; }; }, [slug]);
+  if (brand === undefined) return <div className="p-10 text-center text-slate-500" role="status">Yükleniyor…</div>;
+  if (brand === null) return <Navigate to="/giris" replace />;
+  return <Login brand={brand} />;
+}
+
+// İlk giriş (geçici şifre) → zorunlu şifre değiştirme. Başka hiçbir ekrana geçilemez.
+export function ChangePassword() {
+  const { user, patchUser, logout } = useAuth();
+  const [pw, setPw] = useState('');
+  useBrandColor(user?.institution?.color);
+  const f = useForm(async d => {
+    if (d.newPassword !== d.again) throw new Error('Yeni şifreler aynı değil');
+    await post('/auth/change-password', { currentPassword: d.currentPassword, newPassword: d.newPassword });
+    patchUser({ mustChangePassword: false });
+  });
+  const st = pw ? strengthOf(pw) : -1;
+  return (
+    <>
+      <Ambient />
+      <Frame hideHome brand={user?.institution} title="Yeni şifre belirle" subtitle="Güvenliğin için kurumun verdiği geçici şifreyi değiştirmen gerekiyor."
+        footer={<button type="button" onClick={logout} className="text-slate-400 underline-offset-4 hover:text-slate-200 hover:underline">Çıkış yap</button>}>
+        <Form f={f}>
+          <Field id="currentPassword" label="Geçici şifre"><Password id="currentPassword" name="currentPassword" autoComplete="current-password" /></Field>
+          <Field id="newPassword" label="Yeni şifre" hint="En az 8 karakter, harf ve rakam içermeli.">
+            <Password id="newPassword" name="newPassword" autoComplete="new-password" minLength={8} maxLength={72} value={pw} onChange={e => setPw(e.target.value)} />
+            <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">{[0, 1, 2, 3].map(i => <span key={i} className={clsx('h-1 flex-1 rounded-full transition-colors duration-300', i < st ? (st >= 3 ? 'bg-accent' : st === 2 ? 'bg-amber-400' : 'bg-red-400') : 'bg-white/10')} />)}</div>
+          </Field>
+          <Field id="again" label="Yeni şifre (tekrar)"><Password id="again" name="again" autoComplete="new-password" minLength={8} maxLength={72} /></Field>
+          <Msg {...f} /><Submit busy={f.busy}>Şifreyi kaydet</Submit>
+        </Form>
+      </Frame>
+    </>
   );
 }
