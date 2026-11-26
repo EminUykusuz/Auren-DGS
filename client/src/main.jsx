@@ -16,4 +16,8 @@ function Root() {
   return <MotionConfig reducedMotion={perf ? 'always' : 'user'}><ErrorBoundary><BrowserRouter><App /></BrowserRouter></ErrorBoundary></MotionConfig>;
 }
 
+// Oturumsuz ziyaretçi (kayıtlı sınav tercihi yok) "/" açıyorsa Landing paketi, /api/auth/me yanıtını beklemeden paralel inmeye başlar.
+// Giriş yapmış kullanıcıda bu anahtar vardır; onlar için 50 KB'lık Landing indirilmez.
+if (location.pathname === '/' && !localStorage.getItem('auren_mode')) import('./pages/Landing.jsx');
+
 createRoot(document.getElementById('root')).render(<Root />);
