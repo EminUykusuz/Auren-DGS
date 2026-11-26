@@ -63,7 +63,6 @@ function Alerts() {
               </ul>}
             </div>))}
         </div>)}
-      <Err>{err}</Err>
     </Item>
   );
 }
