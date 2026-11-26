@@ -120,7 +120,7 @@ export function Shell() {
           <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">Auren Study <span className="text-accent">{mode}</span></span><span aria-hidden="true">·</span><span>{mode === 'DGS' ? 'Dikey Geçiş Sınavı' : mode === 'LGS' ? '8. sınıf · LGS' : 'TYT · AYT'}</span></div>
           {user.examTrack === 'BOTH' ? <ModeSwitch className="ml-auto" /> : <span className="badge ml-auto bg-accent/15 text-accent">{mode} hesabı</span>}</>}
         </div>
-        <div key={seg + mode + part} className="fade-in"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>
+        <div key={seg + mode + part} className="fade-in min-h-[85dvh]"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>
         <Credit />
       </main>
     </div>
