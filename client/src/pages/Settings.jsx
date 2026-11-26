@@ -221,12 +221,13 @@ function Logout() {
 }
 
 export default function Settings() {
+  const inKurum = !!useAuth(x => x.user)?.institution;   // kurum öğrencisinde hedef/sınav tarihi ve destek kartı gösterilmez
   return (
     <Page>
       <Title>Ayarlar</Title>
       <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
-        <div className="space-y-4"><Profile /><Track /><Appearance /><Target /><DeleteAccount /></div>
-        <div className="space-y-4"><SupportCard /><Feedback /><Logout /></div>
+        <div className="space-y-4"><Profile /><Track /><Appearance />{!inKurum && <Target />}<DeleteAccount /></div>
+        <div className="space-y-4">{!inKurum && <SupportCard />}<Feedback /><Logout /></div>
       </div>
     </Page>
   );

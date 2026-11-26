@@ -71,7 +71,7 @@ export default function Yardim() {
 
       <Block icon={Settings} title="Ayarlar">
         <Steps items={[
-          ['Profilini düzenle', 'Ayarlar sayfasında adını, avatarını ve sınav tarihini değiştirebilirsin.', '/ayarlar', 'Ayarlar'],
+          ['Profilini düzenle', 'Ayarlar sayfasında adını, avatarını ve şifreni değiştirebilirsin.' + (inKurum ? '' : ' Sınav tarihini de buradan girersin.') + '', '/ayarlar', 'Ayarlar'],
           ['Görünümü seç', 'Tema ve arka plan seçeneklerini beğenine göre değiştirebilirsin. Cihazın yavaşlarsa "Performans modu (efektleri azalt)" seçeneğini aç.'],
         ]} />
       </Block>

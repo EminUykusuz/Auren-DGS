@@ -7,7 +7,7 @@ import { Page, Item, Title, Stat, Bar } from '../components/ui.jsx';
 import SortTable from '../components/SortTable.jsx';
 import Countdown from '../components/Countdown.jsx';
 import SupportCard from '../components/SupportCard.jsx';
-import { useExam, useExamCfg } from '../store.js';
+import { useExam, useExamCfg, useAuth } from '../store.js';
 import clsx from 'clsx';
 
 const TrendChart = lazy(() => import('../components/TrendChart.jsx'));
@@ -15,6 +15,7 @@ export { Bar };
 const POLL_MS = 15000;
 
 export default function Dashboard() {
+  const inKurum = !!useAuth(x => x.user)?.institution;
   const { cfg, part, partDef, q } = useExamCfg(); const setPart = useExam(x => x.setPart);
   const [s, setS] = useState(null); const [lb, setLb] = useState(null);
   usePoll(() => { get('/stats/me' + q({ part })).then(setS).catch(() => {}); get('/leaderboard' + q({ part })).then(setLb).catch(() => {}); }, POLL_MS, [part]);
@@ -37,7 +38,7 @@ export default function Dashboard() {
           {cfg.parts.map(p => <button key={p.id} role="tab" aria-selected={part === p.id} onClick={() => setPart(p.id)}
             className={clsx('rounded-full px-4 py-1.5 text-xs font-bold transition', part === p.id ? 'bg-accent text-onaccent' : 'text-slate-400 hover:text-slate-200')}>{p.label}</button>)}
         </div>)}>Panel</Title>
-      <Countdown />
+      {!inKurum && <Countdown />}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat icon={Flame} label="Bu hafta" value={`${fmt(s.weeklyHours)} sa`} sub={`${s.weeklyQuestions} soru`} />
         <Stat icon={Target} tone="text-cyan2" label="Ortalama net" value={fmt(s.avgNet)} sub={`Son 5 ${multi ? partDef.label + ' ' : ''}deneme · ${s.examCount} toplam`} />
@@ -66,7 +67,7 @@ export default function Dashboard() {
           <SortTable columns={cols} rows={lb?.rows ?? []} rowKey={r => r.userId} defaultSort={{ key: 'rank', dir: 1 }} rowClass={r => r.isMe && 'bg-accent/[0.06]'} empty="Henüz sıralama yok." />
         </Item>
       </div>
-      <SupportCard compact />
+      {!inKurum && <SupportCard compact />}
     </Page>
   );
 }
