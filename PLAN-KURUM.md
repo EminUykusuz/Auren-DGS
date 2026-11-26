@@ -1,0 +1,45 @@
+# Kurum (Dershane) Paneli — Uygulama Akışı
+
+Branch: `feature/kurum-paneli` (main'e dokunulmaz, push yok). Her faz ayrı commit.
+
+## Roller
+| Rol | Kim | Yapabilir |
+|---|---|---|
+| `admin` (mevcut `IsAdmin`) | Biz (platform) | Kurum oluşturur, kurum yöneticisi atar |
+| `owner` | Dershane müdürü/yöneticisi | Logo, sınıflar, öğretmenler, öğrenciler, sınıf değiştirme, kurum denemeleri, ödev |
+| `teacher` | Öğretmen | Yalnızca atandığı sınıflarda: öğrenci ekleme/şifre sıfırlama, taşıma (iki sınıf da kendisinin ise), deneme sonucu girme, ödev |
+| `student` | Öğrenci | Mevcut uygulama + kurum logosu + ödevler |
+| bireysel | Kuruma bağlı olmayan eski kullanıcılar | Hiçbir şey değişmez (`InstitutionId IS NULL`) |
+
+## Güvenlik kuralları (pazarlığa kapalı)
+1. Kuruma ait her sorgu `InstitutionId = req.institutionId` ile süzülür. ID parametresi tek başına asla yeterli değil (anti-IDOR; başka kurumun kaydı 404 döner).
+2. Kurum öğrencileri arkadaş aramasında global görünmez; yalnızca aynı kurumdakilerle arkadaşlık kurulabilir (çocuk verisi).
+3. Geçici şifre bir kez gösterilir, hash'lenir, ilk girişte değiştirmek zorunlu (`MustChangePassword`).
+4. Kurum pasifse (`IsActive=0`) tüm kullanıcıları anında oturum dışı kalır.
+5. Logo: yalnızca png/jpeg/webp (SVG yok → XSS yok), en çok 300 KB, DB'de saklanır.
+
+## Fazlar
+| # | Faz | İçerik | Durum |
+|---|---|---|---|
+| 0 | Plan + saf mantık modülleri | kullanıcı adı/şifre üretimi, CSV/Excel-yapıştır ayrıştırma, yetki yardımcıları + unit test | |
+| 1 | Altyapı | migration 009 (Institutions, Classes, TeacherClasses, ClassTransfers, Users rol/kurum/sınıf/StudentNo/MustChangePassword), requireAuth, requireStaff/Owner | |
+| 2 | Kurum + marka | admin: kurum oluştur; `/k/:slug` markalı giriş; logo yükle/servis; öğrenci uygulamasında logo | |
+| 3 | Sınıf + öğrenci | sınıf CRUD, tek tek ve **toplu (Excel yapıştır / CSV) öğrenci ekleme**, giriş bilgisi çıktısı (CSV), şifre sıfırlama, öğretmen hesapları | |
+| 4 | Sınıf değiştirme | tekli/toplu taşıma, geçmiş (ClassTransfers), sıralamaya göre öneri ("ilk N → A sınıfı") | |
+| 5 | Kurum denemeleri | öğretmen deneme tanımlar, sonuçları toplu yapıştırır → öğrencilerin Denemeler sayfasına düşer; sınıf sıralaması | |
+| 6 | Haftalık ödev | sınıfa ödev (konu, soru hedefi, bitiş), öğrenci işaretler, öğretmen takip eder | |
+| 7 | Yanlış defteri | fotoğraflı soru bazlı kayıt (istemcide sıkıştırma, DB'de saklama) | |
+| 8 | LGS | ayrı net kuralı (3 yanlış 1 doğru), ayrı müfredat/bölümler, `ExamTrack='LGS'` (diğerleriyle karışmaz) | |
+
+## Excel kolaylaştırma
+- Excel'den hücreleri kopyala → kutuya yapıştır (sekmeyle ayrılmış) ya da `.csv` yükle.
+- Önizleme tablosu: satır satır hata gösterir (eksik ad, tekrar eden numara…), düzeltmeden içeri almaz.
+- Şablon indir (`ogrenci-sablonu.csv`). Türkçe Excel `;` ayracı ve UTF-8 BOM desteklenir.
+- Sonuç: oluşturulan kullanıcı adı + geçici şifre listesi tek tıkla CSV indirilir (yazdırılıp dağıtılır).
+
+## Canlıya alma kontrol listesi (sabah sen)
+1. Branch'i incele, `server/migrations/009_institutions.sql` dosyasını oku.
+2. **DB yedeği al**, sonra `npm run migrate`.
+3. `cd server && npm test` (DB'ye karşı çalışır).
+4. Admin ile bir deneme kurumu oluştur, akışı elle dene.
+5. Sonra main'e birleştir ve `YAYINLA.bat`.
