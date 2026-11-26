@@ -104,6 +104,17 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'migrate başarısız' }
   Pop-Location
 
+  # API zamanlanmış görevi NETWORK SERVICE ile çalışır; SQL Server'da bu hesabın girişi yoksa API "Login failed" ile açılmaz. Idempotent, en iyi çaba.
+  Step 'SQL erişimi (NETWORK SERVICE)'
+  try {
+    if ($dbName -and $sqlcmd) {
+      $q = "IF SUSER_ID(N'NT AUTHORITY\NETWORK SERVICE') IS NULL CREATE LOGIN [NT AUTHORITY\NETWORK SERVICE] FROM WINDOWS WITH DEFAULT_DATABASE=[$dbName]; USE [$dbName]; IF USER_ID(N'NT AUTHORITY\NETWORK SERVICE') IS NULL CREATE USER [NT AUTHORITY\NETWORK SERVICE] FOR LOGIN [NT AUTHORITY\NETWORK SERVICE]; ALTER ROLE db_owner ADD MEMBER [NT AUTHORITY\NETWORK SERVICE];"
+      & $sqlcmd.Source -S localhost -E -C -b -Q $q | Out-Host
+      if ($LASTEXITCODE -ne 0) { Write-Host "UYARI: NETWORK SERVICE SQL girişi ayarlanamadı (kod $LASTEXITCODE)." -ForegroundColor Yellow }
+      $global:LASTEXITCODE = 0
+    }
+  } catch { Write-Host "UYARI: SQL erişimi ayarı hatası: $_" -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+
   Step 'API başlatılıyor'
   Start-Api
   if (-not (Wait-Healthy)) { throw "Sağlık kontrolü başarısız (http://127.0.0.1:$Port/api/health)" }

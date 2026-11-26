@@ -58,7 +58,7 @@ jobs:
     needs: check
     runs-on: [self-hosted, windows]
     if: github.repository == 'EminUykusuz/Auren-DGS' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: production
     steps:
       - uses: actions/checkout@v4
