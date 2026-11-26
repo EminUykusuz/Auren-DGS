@@ -1,12 +1,13 @@
 import { lazy, Suspense, useState } from 'react';
 import { NavLink, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound, ClipboardList, CircleHelp } from 'lucide-react';
+import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound, ClipboardList, Megaphone, TriangleAlert, FileText, CircleHelp } from 'lucide-react';
 import clsx from 'clsx';
 import { get, post, put, del, api } from '../lib/api.js';
 import { useAuth } from '../store.js';
 import { useLoad } from '../lib/useLoad.js';
 import { usePoll } from '../lib/poll.js';
+import { openReport } from '../lib/report.js';
 import { logoUrl } from '../lib/kurum.js';
 import { Page, Item, Title, Stat, Bar } from '../components/ui.jsx';
 
@@ -14,6 +15,7 @@ const Students = lazy(() => import('./KurumStudents.jsx'));
 const Placement = lazy(() => import('./KurumPlacement.jsx'));
 const Teachers = lazy(() => import('./KurumTeachers.jsx'));
 const Odev = lazy(() => import('./KurumOdev.jsx'));
+const Duyuru = lazy(() => import('./KurumDuyuru.jsx'));
 const Yardim = lazy(() => import('./KurumYardim.jsx'));
 
 const Err = ({ children }) => children ? <p role="alert" className="rounded-2xl bg-red-500/10 px-3.5 py-2.5 text-xs text-red-300">{children}</p> : null;
@@ -23,7 +25,7 @@ function Tabs({ owner }) {
   const [reqs, setReqs] = useState(0);   // yanıt bekleyen teslim tarihi talepleri
   usePoll(() => { get('/odev/requests-count').then(r => setReqs(r.open)).catch(() => {}); }, 60000);
   const tabs = [['/kurum', 'Genel', Users, true], ['/kurum/ogrenciler', 'Öğrenciler', GraduationCap], ['/kurum/siniflar', 'Sınıflar', School],
-    ['/kurum/odev', 'Ödev', ClipboardList], ['/kurum/yerlestirme', 'Sınıf değiştirme', ArrowRightLeft], ...(owner ? [['/kurum/ogretmenler', 'Öğretmenler', UserCheck]] : []),
+    ['/kurum/odev', 'Ödev', ClipboardList], ['/kurum/duyuru', 'Duyuru', Megaphone], ['/kurum/yerlestirme', 'Sınıf değiştirme', ArrowRightLeft], ...(owner ? [['/kurum/ogretmenler', 'Öğretmenler', UserCheck]] : []),
     ['/kurum/gecmis', 'Geçmiş', HistoryIcon], ...(owner ? [['/kurum/marka', 'Marka', Palette]] : []), ['/kurum/yardim', 'Nasıl kullanılır', CircleHelp]];
   return (
     <Item className="glass-pill mx-auto flex w-fit max-w-full gap-1 overflow-x-auto p-1">
@@ -33,6 +35,39 @@ function Tabs({ owner }) {
             {isActive && <motion.span layoutId="kurum-tab" className="absolute inset-0 rounded-full bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,.18)]" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
             <span className="relative flex"><Icon size={16} strokeWidth={1.8} />{to === '/kurum/odev' && reqs > 0 && <span className="num absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-onaccent" aria-label={reqs + ' tarih talebi bekliyor'}>{reqs}</span>}</span><span className="relative hidden md:inline">{l}</span></>)}
         </NavLink>))}
+    </Item>
+  );
+}
+
+// Dikkat gerektiren öğrenciler: girmeyenler, neti düşenler, ödevi gecikenler. Satırdan veli raporu açılır.
+function Alerts() {
+  const { data, error } = useLoad('/kurum/alerts');
+  const [err, setErr] = useState('');
+  if (error) return <Err>{error}</Err>;
+  if (!data) return null;
+  const cols = [
+    ['Uzun süredir girmeyen', data.inactive, s => (s.days == null || s.days > 3650 ? 'hiç girmedi' : s.days + ' gündür yok')],
+    ['Neti düşen', data.drop, s => s.avg + ' → ' + s.last + ' net'],
+    ['Ödevi geciken', data.late, s => s.count + ' ödev gecikti'],
+  ];
+  const total = cols.reduce((n, c) => n + c[1].length, 0);
+  const report = async (id) => { setErr(''); try { await openReport(id); } catch (e) { setErr(e.message); } };
+  return (
+    <Item className="card space-y-3">
+      <div className="flex items-center gap-2"><TriangleAlert size={16} className="text-amber-300" /><p className="font-semibold text-slate-100">Dikkat gerektiren öğrenciler</p>{total > 0 && <span className="badge bg-amber-400/15 text-amber-300">{total}</span>}</div>
+      {total === 0 ? <p className="text-sm text-slate-400">Şu an uyarı yok: herkes düzenli giriyor, net düşüşü ve geciken ödev görünmüyor.</p> : (
+        <div className="grid gap-4 md:grid-cols-3">
+          {cols.map(([title, rows, note]) => (
+            <div key={title}><p className="stat-label mb-1.5">{title} ({rows.length})</p>
+              {rows.length === 0 ? <p className="text-xs text-slate-600">—</p> : <ul className="max-h-56 space-y-1 overflow-auto">
+                {rows.map(s => (
+                  <li key={s.id + title} className="flex items-center gap-2 rounded-xl bg-white/[.03] px-3 py-1.5 text-sm">
+                    <span className="mr-auto min-w-0"><span className="block truncate text-slate-100">{s.name}</span><span className="block truncate text-xs text-slate-500">{[s.className, note(s)].filter(Boolean).join(' · ')}</span></span>
+                    <button className="btn-ghost !p-1.5" onClick={() => report(s.id)} aria-label={s.name + ' için veli raporu'} title="Veli raporu"><FileText size={13} /></button></li>))}
+              </ul>}
+            </div>))}
+        </div>)}
+      <Err>{err}</Err>
     </Item>
   );
 }
@@ -49,6 +84,7 @@ function Overview() {
       <Stat icon={KeyRound} tone="text-amber-300" label="İlk girişi bekleyen" value={o.pendingFirstLogin} sub="Şifresini henüz değiştirmedi" />
       <Stat icon={School} label="Sınıf" value={o.classes} />
     </div>
+    <Alerts />
     {o.studentLimit && <Item className="card"><div className="stat-label mb-2">Öğrenci kotası · {o.students}/{o.studentLimit}</div><Bar percent={Math.min(100, o.students / o.studentLimit * 100)} label="Kota doluluğu" /></Item>}
     <Item className="card flex flex-wrap items-center gap-3">
       <div className="mr-auto"><p className="font-semibold text-slate-100">Excel&apos;e aktar</p><p className="text-xs text-slate-500">Yetkin olan öğrencilerin verisi; .xlsx olarak iner.</p></div>
@@ -197,6 +233,7 @@ export default function Kurum() {
           <Route path="ogrenciler" element={<Students />} />
           <Route path="siniflar" element={<Classes />} />
           <Route path="odev" element={<Odev />} />
+          <Route path="duyuru" element={<Duyuru />} />
           <Route path="yerlestirme" element={<Placement />} />
           {owner && <Route path="ogretmenler" element={<Teachers />} />}
           <Route path="yardim" element={<Yardim />} />

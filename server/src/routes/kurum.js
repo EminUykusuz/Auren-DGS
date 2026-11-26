@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { query, tx } from '../db.js';
 import { requireStaff, requireOwner, validate, wrap, assignedClassIds } from '../security.js';
 import { sendXlsx } from '../xlsx.js';
-import { asciiFold, makeUsername, genPassword, parseStudentText, canTransfer, suggestPlacement, MAX_BULK } from '../kurum-lib.js';
+import { asciiFold, makeUsername, genPassword, parseStudentText, canTransfer, suggestPlacement, netDrop, MAX_BULK } from '../kurum-lib.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -391,6 +391,56 @@ r.get('/overview', ...requireStaff, wrap(async (req, res) => {
     (SELECT COUNT(*) FROM dbo.Classes c WHERE c.InstitutionId=@inst AND c.IsArchived=0 ${req.role === 'owner' ? '' : 'AND c.Id IN (SELECT ClassId FROM dbo.TeacherClasses WHERE TeacherId=@me)'}) AS Classes,
     (SELECT StudentLimit FROM dbo.Institutions WHERE Id=@inst) AS StudentLimit`, scopeParams(req));
   res.json({ students: o.Students, activeWeek: o.ActiveWeek, pendingFirstLogin: o.NeverLoggedIn, classes: o.Classes, studentLimit: o.StudentLimit });
+}));
+
+// Dikkat gerektiren öğrenciler: 7+ gündür girmeyen, neti düşen, ödevi geciken (kapsam: yönetici → kurum, öğretmen → sınıfları)
+r.get('/alerts', ...requireStaff, wrap(async (req, res) => {
+  const p = { ...scopeParams(req), today: new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10) };
+  const inactive = await query(`SELECT TOP 50 u.Id, COALESCE(u.FullName, u.Username) AS Name, c.Name AS ClassName, DATEDIFF(day, u.LastLoginAt, SYSUTCDATETIME()) AS Days
+    FROM dbo.Users u LEFT JOIN dbo.Classes c ON c.Id=u.ClassId WHERE u.Role='student' AND u.IsDisabled=0 AND u.MustChangePassword=0 AND ${scopeSql(req)}
+      AND (u.LastLoginAt IS NULL OR u.LastLoginAt < DATEADD(day,-7,SYSUTCDATETIME())) ORDER BY u.LastLoginAt`, p);
+  const late = await query(`SELECT TOP 50 u.Id, COALESCE(u.FullName, u.Username) AS Name, c.Name AS ClassName, x.N
+    FROM (SELECT u2.Id AS UserId, COUNT(*) AS N FROM dbo.Users u2 JOIN dbo.Homework h ON h.InstitutionId=u2.InstitutionId AND ((h.ClassId IS NOT NULL AND h.ClassId=u2.ClassId) OR h.UserId=u2.Id)
+        LEFT JOIN dbo.HomeworkDue du ON du.HomeworkId=h.Id AND du.UserId=u2.Id
+        WHERE u2.Role='student' AND u2.IsDisabled=0 AND COALESCE(du.DueDate, h.DueDate) < CAST(@today AS date)
+          AND NOT EXISTS (SELECT 1 FROM dbo.HomeworkSubmissions s WHERE s.HomeworkId=h.Id AND s.UserId=u2.Id) GROUP BY u2.Id HAVING COUNT(*) >= 2) x
+    JOIN dbo.Users u ON u.Id=x.UserId LEFT JOIN dbo.Classes c ON c.Id=u.ClassId WHERE ${scopeSql(req)} ORDER BY x.N DESC`, p);
+  const ex = await query(`SELECT e.UserId, e.ExamPart, e.TotalNet, u.FullName, u.Username, c.Name AS ClassName,
+      ROW_NUMBER() OVER (PARTITION BY e.UserId, e.ExamPart ORDER BY e.ExamDate DESC, e.Id DESC) AS rn
+    FROM dbo.TrialExams e JOIN dbo.Users u ON u.Id=e.UserId LEFT JOIN dbo.Classes c ON c.Id=u.ClassId
+    WHERE u.Role='student' AND u.IsDisabled=0 AND e.TotalNet IS NOT NULL AND ${scopeSql(req)}`, p);
+  const groups = new Map();
+  for (const e of ex) { if (e.rn > 4) continue; const k = e.UserId + ':' + e.ExamPart; if (!groups.has(k)) groups.set(k, { e, nets: [] }); groups.get(k).nets[e.rn - 1] = Number(e.TotalNet); }
+  const drop = [];
+  for (const { e, nets } of groups.values()) { const d = netDrop(nets); if (d) drop.push({ id: e.UserId, name: e.FullName || e.Username, className: e.ClassName ?? null, part: e.ExamPart, ...d }); }
+  drop.sort((a, b) => b.drop - a.drop);
+  res.json({
+    inactive: inactive.map(s => ({ id: s.Id, name: s.Name, className: s.ClassName ?? null, days: s.Days })),
+    drop: drop.slice(0, 50), late: late.map(s => ({ id: s.Id, name: s.Name, className: s.ClassName ?? null, count: s.N })),
+  });
+}));
+
+// Veli raporu verisi: son denemeler, ödev durumu, etkinlik. İstemci bunu yazdırılabilir sayfaya çevirir.
+r.get('/students/:id/report', ...requireStaff, validate(idParam, 'params'), wrap(async (req, res) => {
+  const s = await getStudent(req, req.params.id);
+  if (!s) return res.status(404).json({ error: 'Öğrenci bulunamadı' });
+  const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+  const [info] = await query(`SELECT u.LastLoginAt, c.Name AS ClassName, i.Name AS InstName FROM dbo.Users u LEFT JOIN dbo.Classes c ON c.Id=u.ClassId JOIN dbo.Institutions i ON i.Id=u.InstitutionId WHERE u.Id=@id`, { id: s.Id });
+  const exams = await query(`SELECT TOP 12 e.ExamType, e.ExamPart, e.ExamName, CONVERT(char(10), e.ExamDate, 23) AS ExamDate, e.TotalNet FROM dbo.TrialExams e WHERE e.UserId=@id AND e.TotalNet IS NOT NULL ORDER BY e.ExamDate DESC, e.Id DESC`, { id: s.Id });
+  const hw = await query(`SELECT TOP 30 h.Id, h.Title, CONVERT(char(10), COALESCE(du.DueDate, h.DueDate), 23) AS Due, h.UserId,
+      (SELECT COUNT(*) FROM dbo.HomeworkItems i WHERE i.HomeworkId=h.Id) AS Items,
+      (SELECT COUNT(*) FROM dbo.HomeworkItems i JOIN dbo.HomeworkDone d ON d.ItemId=i.Id AND d.UserId=@id WHERE i.HomeworkId=h.Id) AS Done,
+      CASE WHEN EXISTS (SELECT 1 FROM dbo.HomeworkSubmissions x WHERE x.HomeworkId=h.Id AND x.UserId=@id) THEN 1 ELSE 0 END AS Submitted
+    FROM dbo.Homework h LEFT JOIN dbo.HomeworkDue du ON du.HomeworkId=h.Id AND du.UserId=@id
+    WHERE h.InstitutionId=@inst AND ((h.ClassId IS NOT NULL AND h.ClassId=@cls) OR h.UserId=@id) ORDER BY h.CreatedAt DESC`, { id: s.Id, inst: req.institutionId, cls: s.ClassId ?? 0 });
+  const nets = exams.map(e => Number(e.TotalNet));
+  const avg = (a) => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 100) / 100 : null);
+  res.json({
+    institution: info.InstName, student: { name: s.FullName || s.Username, studentNo: s.StudentNo ?? '', className: info.ClassName ?? null, lastLoginAt: info.LastLoginAt },
+    generatedAt: new Date().toISOString(), avg3: avg(nets.slice(0, 3)), avgPrev: avg(nets.slice(3, 6)),
+    exams: exams.map(e => ({ type: e.ExamType, part: e.ExamPart, name: e.ExamName, date: e.ExamDate, net: n2(e.TotalNet) })),
+    homework: hw.map(h => ({ title: h.Title, due: h.Due ?? null, personal: !!h.UserId, items: h.Items, done: h.Done, submitted: !!h.Submitted, late: !h.Submitted && !!h.Due && h.Due < today })),
+  });
 }));
 
 // ---------- Excel dışa aktarma (kapsam: yönetici → kurum, öğretmen → atandığı sınıflar) ----------

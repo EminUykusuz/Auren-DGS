@@ -31,6 +31,7 @@ class Client {
 }
 
 async function wipe(id) {
+  await query(`DELETE FROM dbo.Announcements WHERE InstitutionId=@i`, { i: id });
   await query(`DELETE FROM dbo.Homework WHERE InstitutionId=@i`, { i: id });
   await query(`DELETE FROM dbo.ClassTransfers WHERE InstitutionId=@i`, { i: id });
   await query(`DELETE FROM dbo.TeacherClasses WHERE ClassId IN (SELECT Id FROM dbo.Classes WHERE InstitutionId=@i)`, { i: id });

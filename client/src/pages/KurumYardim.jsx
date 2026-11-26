@@ -1,4 +1,4 @@
-import { Rocket, ClipboardList, Users, ArrowRightLeft, Palette, ShieldCheck, FileSpreadsheet } from 'lucide-react';
+import { Rocket, ClipboardList, Users, ArrowRightLeft, Palette, ShieldCheck, FileSpreadsheet, Megaphone, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../store.js';
 import { Block, Steps, Note } from '../components/Guide.jsx';
 
@@ -39,6 +39,20 @@ export default function KurumYardim() {
         ['Bitirdi onayı', 'Öğrenci "Ödevi bitirdim" deyince tüm maddeler tamamlandı sayılır. Ödev listesinde "Bitirdi" etiketi ve tamamlama oranı görünür.'],
         ['Tarih talebi', 'Öğrenci yeni bir teslim tarihi isterse Ödev sekmesinde ve ödevin yanında turuncu "tarih talebi" rozeti çıkar. Satırdaki mesaj simgesine bas.'],
         ['Yanıtla', '"Kabul et" ya da "Reddet" de; ya da kendin yeni bir tarih belirle ve mesaj yaz. Tarih yalnızca o öğrenci için değişir, sınıfın geri kalanı etkilenmez.'],
+      ]} />
+    </Block>
+
+    <Block icon={Megaphone} title="Duyuru panosu" intro="Sınav günü, ders değişikliği gibi haberleri öğrencilerin ana sayfasına yaz.">
+      <Steps items={[
+        ['Duyuru yaz', 'Duyuru sekmesinde kime yazacağını seç: tüm kurum (yalnızca yönetici) ya da bir sınıf. İstersen son gösterim tarihi koy; tarih geçince duyuru öğrencilerden kalkar.'],
+        ['Kim okudu?', 'Her duyurunun yanında "12/20 öğrenci okudu" görünür. Öğrenci duyuruda "Okudum" düğmesine basar.'],
+      ]} />
+    </Block>
+
+    <Block icon={TriangleAlert} title="Dikkat gerektiren öğrenciler ve veli raporu" intro="Genel sayfada üç liste otomatik oluşur; kimle ilgilenmen gerektiğini sistem gösterir.">
+      <Steps items={[
+        ['Uyarı listeleri', '7 günden uzun süredir girmeyenler, son denemesi önceki ortalamasından belirgin düşenler ve 2 ya da daha çok ödevi geciken öğrenciler listelenir. Öğretmen yalnızca kendi sınıflarını görür.'],
+        ['Veli raporu', 'Uyarı listesindeki ya da Öğrenciler sekmesindeki rapor simgesine bas. Son denemeler, ortalama net, ödev durumu tek sayfada açılır; "Yazdır / PDF olarak kaydet" ile veliye verirsin.'],
       ]} />
     </Block>
 

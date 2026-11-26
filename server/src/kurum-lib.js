@@ -118,3 +118,11 @@ export function suggestPlacement(students, tiers) {
   }
   return out;
 }
+
+// Net düşüşü: nets en yeniden eskiye. Son deneme, ondan önceki en çok 3 denemenin ortalamasından en az 3 net ve %15 düşükse uyarı.
+export function netDrop(nets) {
+  if (nets.length < 3) return null;
+  const prev = nets.slice(1, 4), avg = prev.reduce((a, b) => a + b, 0) / prev.length, drop = avg - nets[0];
+  if (avg <= 0 || drop < 3 || drop / avg < 0.15) return null;
+  return { last: Math.round(nets[0] * 100) / 100, avg: Math.round(avg * 100) / 100, drop: Math.round(drop * 100) / 100 };
+}

@@ -17,6 +17,7 @@ import admin from './routes/admin.js';
 import profile from './routes/profile.js';
 import kurum from './routes/kurum.js';
 import odev from './routes/odev.js';
+import duyuru from './routes/duyuru.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -56,6 +57,7 @@ app.use('/api', profile);
 app.use('/api/admin', admin);
 app.use('/api/kurum', kurum);
 app.use('/api/odev', odev);
+app.use('/api/duyuru', duyuru);
 
 // Derlenmiş istemci (client/dist) varsa aynı portta sun: sıkıştırma + uzun süreli önbellek
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');

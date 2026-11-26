@@ -6,6 +6,7 @@ import { usePoll } from '../lib/poll.js';
 import { Page, Item, Title, Stat, Bar } from '../components/ui.jsx';
 import SortTable from '../components/SortTable.jsx';
 import Countdown from '../components/Countdown.jsx';
+import Announcements from '../components/Announcements.jsx';
 import SupportCard from '../components/SupportCard.jsx';
 import { useExam, useExamCfg, useAuth } from '../store.js';
 import clsx from 'clsx';
@@ -38,6 +39,7 @@ export default function Dashboard() {
           {cfg.parts.map(p => <button key={p.id} role="tab" aria-selected={part === p.id} onClick={() => setPart(p.id)}
             className={clsx('rounded-full px-4 py-1.5 text-xs font-bold transition', part === p.id ? 'bg-accent text-onaccent' : 'text-slate-400 hover:text-slate-200')}>{p.label}</button>)}
         </div>)}>Panel</Title>
+      {inKurum && <Announcements />}
       {!inKurum && <Countdown />}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat icon={Flame} label="Bu hafta" value={`${fmt(s.weeklyHours)} sa`} sub={`${s.weeklyQuestions} soru`} />
