@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { config } from '../config.js';
+import { sendResetMail } from '../mailer.js';
 import { query, tx } from '../db.js';
 import { authLimiter, loginLimiter, userLimiter, setAuthCookie, requireAuth, validate, wrap } from '../security.js';
 
@@ -68,7 +69,7 @@ r.post('/change-password', requireAuth, userLimiter, validate(z.object({ current
 
 // Kullanıcı numaralandırmayı önlemek için her zaman aynı yanıt.
 r.post('/forgot-password', authLimiter, validate(z.object({ email })), wrap(async (req, res) => {
-  const [u] = await query(`SELECT Id FROM dbo.Users WHERE Email=@e`, { e: req.body.email });
+  const [u] = await query(`SELECT Id, Email FROM dbo.Users WHERE Email=@e`, { e: req.body.email });
   if (u) {
     const token = crypto.randomBytes(32).toString('base64url');
     const th = sha256(token);
@@ -78,8 +79,9 @@ r.post('/forgot-password', authLimiter, validate(z.object({ email })), wrap(asyn
       await q(`INSERT INTO dbo.PasswordResets (UserId, TokenHash, ExpiresAt) VALUES (@id,@th,DATEADD(minute,@m,SYSUTCDATETIME()))`, { id: u.Id, th, m });
       await q(`UPDATE dbo.Users SET ResetTokenHash=@th, ResetTokenExpires=DATEADD(minute,@m,SYSUTCDATETIME()) WHERE Id=@id`, { id: u.Id, th, m });
     });
-    // SMTP entegrasyonu yok: bağlantı yalnızca geliştirme konsoluna yazılır.
-    if (!config.isProd) console.log(`[şifre sıfırlama] ${config.appUrl}/reset-password?token=${token}`);
+    const link = `${config.appUrl}/reset-password?token=${token}`;
+    // E-posta ayarlıysa gönderilir; değilse yalnızca geliştirmede konsola yazılır. Yanıt süresi/içeriği her iki durumda aynı kalsın diye beklenmez.
+    sendResetMail(u.Email, link, m).then(r => { if (r.status === 'queued' && !config.isProd) console.log(`[şifre sıfırlama] ${link}`); });
   } else {
     await bcrypt.compare('x', DUMMY_HASH); // zamanlama benzerliği
   }
