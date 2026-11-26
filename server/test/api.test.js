@@ -226,7 +226,7 @@ test('hibrit: YKS denemesi 4 yanlış 1 doğru, bölüm sınırları, mod filtre
 
 test('hibrit: kalıcı mod tercihi + mod bazlı oturum/müfredat doğrulaması', async () => {
   assert.equal((await D.call('GET', '/auth/me')).json.user.examMode, 'DGS');
-  assert.equal((await D.call('PUT', '/profile/mode', { examMode: 'LGS' })).status, 400);
+  assert.equal((await D.call('PUT', '/profile/mode', { examMode: 'XYZ' })).status, 400);
   assert.equal((await D.call('PUT', '/profile/mode', { examMode: 'YKS' })).status, 200);
   assert.equal((await D.call('GET', '/auth/me')).json.user.examMode, 'YKS');
   assert.equal((await D.call('GET', '/profile')).json.examMode, 'YKS');
@@ -297,7 +297,7 @@ test('profil kimliği: ad soyad, avatar allowlist, e-posta değişimi şifre ist
 
 test('hesap türü: tek sınav hesabı moda kilitlenir, hibrit ikisi arasında geçer; işlem hatası nedeni geçerli', async () => {
   const x = new Client(), u = mk('track');
-  assert.equal((await x.call('POST', '/auth/register', { ...u, examTrack: 'LGS' })).status, 400);
+  assert.equal((await x.call('POST', '/auth/register', { ...u, examTrack: 'XYZ' })).status, 400);
   const r = await x.call('POST', '/auth/register', { ...u, examTrack: 'YKS' });
   assert.equal(r.status, 201);
   const me = (await x.call('GET', '/auth/me')).json.user;

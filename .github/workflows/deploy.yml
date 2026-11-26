@@ -1,8 +1,13 @@
 name: Deploy
 
-# İsteğe bağlı manuel Actions dağıtımı. Normal yayın için VDS'te YAYINLA.bat kullanılır.
+# Otomatik dağıtım: `main` dalına push → derleme + sözdizimi kontrolü (bulut) → VDS'teki self-hosted runner'da deploy.ps1.
+# Elle de tetiklenebilir (Actions → Deploy → Run workflow). YAYINLA.bat yedek yol olarak durur.
+# GÜVENLİK: repo herkese açık olduğu için bu workflow ASLA `pull_request` ile tetiklenmemeli; yoksa yabancı bir fork,
+# kodunu VDS'teki runner'da çalıştırabilir. Yalnızca `push` (yazma yetkisi gerekir) ve elle tetikleme kalmalı.
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -52,6 +57,7 @@ jobs:
   deploy-api:
     needs: check
     runs-on: [self-hosted, windows]
+    if: github.repository == 'EminUykusuz/Auren-DGS' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     timeout-minutes: 15
     environment: production
     steps:

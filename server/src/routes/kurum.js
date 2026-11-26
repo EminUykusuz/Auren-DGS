@@ -154,7 +154,7 @@ async function createStudents(req, rows, opts) {
   const taken = new Set();
   for (let i = 0; i < bases.length; i += 200) {
     const part = bases.slice(i, i + 200);
-    (await query(`SELECT Username FROM dbo.Users WHERE ${part.map((_, k) => `Username LIKE @p${k}`).join(' OR ')}`, Object.fromEntries(part.map((b, k) => ['p' + k, b + '%']))))
+    (await query(`SELECT Username FROM dbo.Users WHERE ${part.map((_, k) => `Username LIKE @lk${k}`).join(' OR ')}`, Object.fromEntries(part.map((b, k) => ['lk' + k, b + '%']))))
       .forEach(x => taken.add(x.Username.toLowerCase()));
   }
   const passwords = plan.map(() => genPassword());

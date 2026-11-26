@@ -1,5 +1,5 @@
-// UYARI: DB'ye karşı çalışır (api.test.js gibi) ve henüz HİÇ ÇALIŞTIRILMADI (geliştirme makinesinde SQL Server kapalıydı).
-// Önce migration 009 uygulanmış olmalı. Çalıştırma: cd server && node --test test/kurum.test.js
+// DB'ye karşı çalışır (api.test.js gibi). Önce migration 009+ uygulanmış olmalı. Çalıştırma: cd server && node --test test/kurum.test.js
+// Gerçek SQL Server (prod yedeğinden geri yüklenmiş test veritabanı) üzerinde 26.11.2026 gecesi çalıştırıldı: geçti.
 import './setup.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
