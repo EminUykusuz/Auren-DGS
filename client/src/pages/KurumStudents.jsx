@@ -1,13 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Check, X, UserPlus, FileSpreadsheet, Search, KeyRound, ArrowRightLeft, Download, Upload, Loader2, Ban, CircleCheck, TriangleAlert, ClipboardList, FileText } from 'lucide-react';
+import { Pencil, Check, X, UserPlus, FileSpreadsheet, Search, KeyRound, ArrowRightLeft, Download, Upload, Loader2, Ban, CircleCheck, TriangleAlert, ClipboardList } from 'lucide-react';
 import clsx from 'clsx';
 import { api, get, post } from '../lib/api.js';
 import { useAuth } from '../store.js';
 import { useLoad } from '../lib/useLoad.js';
 import { downloadCsv, readTextFile, TEMPLATE_ROWS } from '../lib/kurum.js';
 import { Item } from '../components/ui.jsx';
-import { openReport } from '../lib/report.js';
 import Credentials from '../components/Credentials.jsx';
 
 const Err = ({ children }) => children ? <p role="alert" className="rounded-2xl bg-red-500/10 px-3.5 py-2.5 text-xs text-red-300">{children}</p> : null;
@@ -133,7 +132,6 @@ export default function Students() {
     await post('/kurum/students/transfer', { moves: [{ studentId: s.id, toClassId: v === '' ? null : Number(v) }], reason: 'Öğrenci listesinden değiştirildi' });
     setOk((s.fullName || s.username) + ' yeni sınıfına taşındı.'); list.reload(); cls.reload();
   });
-  const report = (s) => run(async () => { await openReport(s.id); });
   const setDisabled = (s) => run(async () => { await api('PATCH', `/kurum/students/${s.id}`, { isDisabled: !s.isDisabled }); list.reload(); });
 
   return (<>
@@ -189,7 +187,7 @@ export default function Students() {
               <td className="px-3 py-2 num">{s.avgNet ?? <span className="text-slate-600">—</span>}</td>
               <td className="px-3 py-2">{s.lateHomework > 0 ? <span className="badge bg-red-500/15 text-red-300">{s.lateHomework} gecikmiş</span> : s.openHomework > 0 ? <span className="badge bg-amber-400/15 text-amber-300">{s.openHomework} açık</span> : <span className="text-slate-600">—</span>}</td>
               <td className="px-3 py-2">{s.mustChangePassword ? <span className="badge bg-amber-400/15 text-amber-300">giriş bekliyor</span> : when(s.lastLoginAt)}</td>
-              <td className="px-3 py-2"><button className="btn-ghost !px-2 !py-1 text-xs mr-1.5" onClick={() => report(s)} aria-label={(s.fullName || s.username) + ' için veli raporu'} title="Veli raporu"><FileText size={12} /></button><button className="btn-ghost !px-2.5 !py-1 text-xs" disabled={busy} onClick={() => setDisabled(s)} aria-label={s.isDisabled ? 'Hesabı etkinleştir' : 'Hesabı pasife al'}>
+              <td className="px-3 py-2"><button className="btn-ghost !px-2.5 !py-1 text-xs" disabled={busy} onClick={() => setDisabled(s)} aria-label={s.isDisabled ? 'Hesabı etkinleştir' : 'Hesabı pasife al'}>
                 {s.isDisabled ? <><Ban size={12} />Pasif</> : <><CircleCheck size={12} className="text-accent" />Aktif</>}</button></td>
             </tr>))}</tbody>
         </table></div>)}

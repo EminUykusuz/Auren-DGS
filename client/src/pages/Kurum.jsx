@@ -1,13 +1,12 @@
 import { lazy, Suspense, useState } from 'react';
 import { NavLink, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound, ClipboardList, Megaphone, TriangleAlert, FileText, CircleHelp } from 'lucide-react';
+import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound, ClipboardList, Megaphone, TriangleAlert, CircleHelp } from 'lucide-react';
 import clsx from 'clsx';
 import { get, post, put, del, api } from '../lib/api.js';
 import { useAuth } from '../store.js';
 import { useLoad } from '../lib/useLoad.js';
 import { usePoll } from '../lib/poll.js';
-import { openReport } from '../lib/report.js';
 import { logoUrl } from '../lib/kurum.js';
 import { Page, Item, Title, Stat, Bar } from '../components/ui.jsx';
 
@@ -39,10 +38,9 @@ function Tabs({ owner }) {
   );
 }
 
-// Dikkat gerektiren öğrenciler: girmeyenler, neti düşenler, ödevi gecikenler. Satırdan veli raporu açılır.
+// Dikkat gerektiren öğrenciler: girmeyenler, neti düşenler, ödevi gecikenler. 
 function Alerts() {
   const { data, error } = useLoad('/kurum/alerts');
-  const [err, setErr] = useState('');
   if (error) return <Err>{error}</Err>;
   if (!data) return null;
   const cols = [
@@ -51,7 +49,6 @@ function Alerts() {
     ['Ödevi geciken', data.late, s => s.count + ' ödev gecikti'],
   ];
   const total = cols.reduce((n, c) => n + c[1].length, 0);
-  const report = async (id) => { setErr(''); try { await openReport(id); } catch (e) { setErr(e.message); } };
   return (
     <Item className="card space-y-3">
       <div className="flex items-center gap-2"><TriangleAlert size={16} className="text-amber-300" /><p className="font-semibold text-slate-100">Dikkat gerektiren öğrenciler</p>{total > 0 && <span className="badge bg-amber-400/15 text-amber-300">{total}</span>}</div>
@@ -62,8 +59,7 @@ function Alerts() {
               {rows.length === 0 ? <p className="text-xs text-slate-600">—</p> : <ul className="max-h-56 space-y-1 overflow-auto">
                 {rows.map(s => (
                   <li key={s.id + title} className="flex items-center gap-2 rounded-xl bg-white/[.03] px-3 py-1.5 text-sm">
-                    <span className="mr-auto min-w-0"><span className="block truncate text-slate-100">{s.name}</span><span className="block truncate text-xs text-slate-500">{[s.className, note(s)].filter(Boolean).join(' · ')}</span></span>
-                    <button className="btn-ghost !p-1.5" onClick={() => report(s.id)} aria-label={s.name + ' için veli raporu'} title="Veli raporu"><FileText size={13} /></button></li>))}
+                    <span className="mr-auto min-w-0"><span className="block truncate text-slate-100">{s.name}</span><span className="block truncate text-xs text-slate-500">{[s.className, note(s)].filter(Boolean).join(' · ')}</span></span></li>))}
               </ul>}
             </div>))}
         </div>)}

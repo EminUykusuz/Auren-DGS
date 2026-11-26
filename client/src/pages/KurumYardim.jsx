@@ -49,10 +49,9 @@ export default function KurumYardim() {
       ]} />
     </Block>
 
-    <Block icon={TriangleAlert} title="Dikkat gerektiren öğrenciler ve veli raporu" intro="Genel sayfada üç liste otomatik oluşur; kimle ilgilenmen gerektiğini sistem gösterir.">
+    <Block icon={TriangleAlert} title="Dikkat gerektiren öğrenciler" intro="Genel sayfada üç liste otomatik oluşur; kimle ilgilenmen gerektiğini sistem gösterir.">
       <Steps items={[
         ['Uyarı listeleri', '7 günden uzun süredir girmeyenler, son denemesi önceki ortalamasından belirgin düşenler ve 2 ya da daha çok ödevi geciken öğrenciler listelenir. Öğretmen yalnızca kendi sınıflarını görür.'],
-        ['Veli raporu', 'Uyarı listesindeki ya da Öğrenciler sekmesindeki rapor simgesine bas. Son denemeler, ortalama net, ödev durumu tek sayfada açılır; "Yazdır / PDF olarak kaydet" ile veliye verirsin.'],
       ]} />
     </Block>
 

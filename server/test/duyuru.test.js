@@ -117,14 +117,3 @@ test('uyarılar: girmeyen, neti düşen ve ödevi geciken öğrenci; öğretmen 
   assert.equal((await OTHER.call('GET', '/kurum/alerts')).json.inactive.length, 0);
   assert.equal((await S1.call('GET', '/kurum/alerts')).status, 404);
 });
-
-test('veli raporu: denemeler, ödevler, ortalama; kapsam dışı öğrenci 404', async () => {
-  const r = (await TEA.call('GET', `/kurum/students/${ids.s1}/report`)).json;
-  assert.equal(r.institution, 'Duyuru Kurum 1'); assert.equal(r.student.name, 'Ayşe Yılmaz'); assert.equal(r.student.className, 'A');
-  assert.equal(r.exams.length, 4); assert.equal(r.exams[0].net, 30); assert.equal(r.avg3, 44);                                                // (30+52+50)/3
-  assert.equal(r.homework.length, 2); assert.ok(r.homework.every(h => h.late && !h.submitted && h.items === 1));
-  assert.equal((await TEA.call('GET', `/kurum/students/${ids.s2}/report`)).status, 404);                                                    // B sınıfı: öğretmenin değil
-  assert.equal((await OWN.call('GET', `/kurum/students/${ids.s2}/report`)).status, 200);
-  assert.equal((await OTHER.call('GET', `/kurum/students/${ids.s1}/report`)).status, 404);
-  assert.equal((await S1.call('GET', `/kurum/students/${ids.s1}/report`)).status, 404);
-});

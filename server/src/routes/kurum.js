@@ -420,29 +420,6 @@ r.get('/alerts', ...requireStaff, wrap(async (req, res) => {
   });
 }));
 
-// Veli raporu verisi: son denemeler, ödev durumu, etkinlik. İstemci bunu yazdırılabilir sayfaya çevirir.
-r.get('/students/:id/report', ...requireStaff, validate(idParam, 'params'), wrap(async (req, res) => {
-  const s = await getStudent(req, req.params.id);
-  if (!s) return res.status(404).json({ error: 'Öğrenci bulunamadı' });
-  const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
-  const [info] = await query(`SELECT u.LastLoginAt, c.Name AS ClassName, i.Name AS InstName FROM dbo.Users u LEFT JOIN dbo.Classes c ON c.Id=u.ClassId JOIN dbo.Institutions i ON i.Id=u.InstitutionId WHERE u.Id=@id`, { id: s.Id });
-  const exams = await query(`SELECT TOP 12 e.ExamType, e.ExamPart, e.ExamName, CONVERT(char(10), e.ExamDate, 23) AS ExamDate, e.TotalNet FROM dbo.TrialExams e WHERE e.UserId=@id AND e.TotalNet IS NOT NULL ORDER BY e.ExamDate DESC, e.Id DESC`, { id: s.Id });
-  const hw = await query(`SELECT TOP 30 h.Id, h.Title, CONVERT(char(10), COALESCE(du.DueDate, h.DueDate), 23) AS Due, h.UserId,
-      (SELECT COUNT(*) FROM dbo.HomeworkItems i WHERE i.HomeworkId=h.Id) AS Items,
-      (SELECT COUNT(*) FROM dbo.HomeworkItems i JOIN dbo.HomeworkDone d ON d.ItemId=i.Id AND d.UserId=@id WHERE i.HomeworkId=h.Id) AS Done,
-      CASE WHEN EXISTS (SELECT 1 FROM dbo.HomeworkSubmissions x WHERE x.HomeworkId=h.Id AND x.UserId=@id) THEN 1 ELSE 0 END AS Submitted
-    FROM dbo.Homework h LEFT JOIN dbo.HomeworkDue du ON du.HomeworkId=h.Id AND du.UserId=@id
-    WHERE h.InstitutionId=@inst AND ((h.ClassId IS NOT NULL AND h.ClassId=@cls) OR h.UserId=@id) ORDER BY h.CreatedAt DESC`, { id: s.Id, inst: req.institutionId, cls: s.ClassId ?? 0 });
-  const nets = exams.map(e => Number(e.TotalNet));
-  const avg = (a) => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 100) / 100 : null);
-  res.json({
-    institution: info.InstName, student: { name: s.FullName || s.Username, studentNo: s.StudentNo ?? '', className: info.ClassName ?? null, lastLoginAt: info.LastLoginAt },
-    generatedAt: new Date().toISOString(), avg3: avg(nets.slice(0, 3)), avgPrev: avg(nets.slice(3, 6)),
-    exams: exams.map(e => ({ type: e.ExamType, part: e.ExamPart, name: e.ExamName, date: e.ExamDate, net: n2(e.TotalNet) })),
-    homework: hw.map(h => ({ title: h.Title, due: h.Due ?? null, personal: !!h.UserId, items: h.Items, done: h.Done, submitted: !!h.Submitted, late: !h.Submitted && !!h.Due && h.Due < today })),
-  });
-}));
-
 // ---------- Excel dışa aktarma (kapsam: yönetici → kurum, öğretmen → atandığı sınıflar) ----------
 const n2 = (v) => (v == null ? null : Math.round(Number(v) * 100) / 100);
 const EXPORT_CAP = 20000;
