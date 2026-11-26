@@ -217,7 +217,7 @@ r.post('/students', ...requireStaff, validate(rowSchema.omit({ line: true }).ext
 // ---------- Öğrenci listesi / düzenleme / şifre ----------
 r.get('/students', ...requireStaff, validate(z.object({ classId: z.coerce.number().int().positive().optional(), unassigned: z.enum(['1']).optional(), q: z.string().trim().max(60).optional() }), 'query'), wrap(async (req, res) => {
   const { classId, unassigned, q } = req.query;
-  const rows = await query(`SELECT TOP 2000 u.Id, u.Username, u.FullName, u.StudentNo, u.ClassId, c.Name AS ClassName, u.IsDisabled, u.MustChangePassword, u.LastLoginAt,
+  const rows = await query(`SELECT TOP 2000 u.Id, u.Username, u.FullName, u.StudentNo, u.ClassId, c.Name AS ClassName, u.IsDisabled, u.MustChangePassword, u.LastLoginAt, u.Email,
       (SELECT AVG(CAST(t.TotalNet AS float)) FROM (SELECT TOP 3 TotalNet FROM dbo.TrialExams WHERE UserId=u.Id ORDER BY ExamDate DESC, Id DESC) t) AS Avg3,
       (SELECT COUNT(*) FROM dbo.Homework h WHERE h.InstitutionId=u.InstitutionId AND ((h.ClassId IS NOT NULL AND h.ClassId=u.ClassId) OR h.UserId=u.Id)
          AND NOT EXISTS (SELECT 1 FROM dbo.HomeworkSubmissions s WHERE s.HomeworkId=h.Id AND s.UserId=u.Id)) AS OpenHw,
@@ -230,21 +230,22 @@ r.get('/students', ...requireStaff, validate(z.object({ classId: z.coerce.number
     { ...scopeParams(req), today: new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10), ...(classId ? { cls: classId } : {}), ...(q ? { like: '%' + q.replace(/[%_\\[]/g, '\\$&') + '%' } : {}) });
   res.json({ students: rows.map(s => ({ id: s.Id, username: s.Username, fullName: s.FullName ?? '', studentNo: s.StudentNo, classId: s.ClassId, className: s.ClassName,
     isDisabled: !!s.IsDisabled, mustChangePassword: !!s.MustChangePassword, lastLoginAt: s.LastLoginAt,
-    avgNet: s.Avg3 == null ? null : Math.round(s.Avg3 * 100) / 100, openHomework: s.OpenHw, lateHomework: s.LateHw })) });
+    email: s.Email && !s.Email.endsWith('@ogrenci.invalid') ? s.Email : null, avgNet: s.Avg3 == null ? null : Math.round(s.Avg3 * 100) / 100, openHomework: s.OpenHw, lateHomework: s.LateHw })) });
 }));
 
 r.patch('/students/:id', ...requireStaff, validate(idParam, 'params'), validate(z.object({
   fullName: z.string().trim().min(3).max(80).optional(),
   studentNo: z.string().trim().regex(/^[\p{L}\p{N}_.-]{1,20}$/u).nullable().optional(), isDisabled: z.boolean().optional(),
+  email: z.string().trim().toLowerCase().email().max(254).refine(e => !e.endsWith('@ogrenci.invalid'), 'Geçersiz e-posta').nullable().optional(),   // ödev bildirimleri için; null → kaldır
 }).strict()), wrap(async (req, res) => {
   const s = await getStudent(req, req.params.id);
   if (!s) return res.status(404).json({ error: 'Bulunamadı' });
   const d = req.body;
   const full = d.fullName ?? null;
   try {
-    await query(`UPDATE dbo.Users SET FullName=COALESCE(@f,FullName), StudentNo=CASE WHEN @setNo=1 THEN @no ELSE StudentNo END, IsDisabled=COALESCE(@dis,IsDisabled) WHERE Id=@id AND InstitutionId=@inst`,
-      { f: full, setNo: 'studentNo' in d ? 1 : 0, no: d.studentNo ?? null, dis: d.isDisabled == null ? null : (d.isDisabled ? 1 : 0), id: s.Id, inst: req.institutionId });
-  } catch (e) { if (isDup(e)) return res.status(409).json({ error: 'Bu numara kurumda zaten kayıtlı' }); throw e; }
+    await query(`UPDATE dbo.Users SET FullName=COALESCE(@f,FullName), StudentNo=CASE WHEN @setNo=1 THEN @no ELSE StudentNo END, IsDisabled=COALESCE(@dis,IsDisabled), Email=CASE WHEN @setMail=1 THEN COALESCE(@mail, Username + '@ogrenci.invalid') ELSE Email END WHERE Id=@id AND InstitutionId=@inst`,
+      { setMail: 'email' in d ? 1 : 0, mail: d.email ?? null, f: full, setNo: 'studentNo' in d ? 1 : 0, no: d.studentNo ?? null, dis: d.isDisabled == null ? null : (d.isDisabled ? 1 : 0), id: s.Id, inst: req.institutionId });
+  } catch (e) { if (isDup(e)) return res.status(409).json({ error: String(e.message).includes('UQ_Users_Email') ? 'Bu e-posta başka bir hesapta kayıtlı' : 'Bu numara kurumda zaten kayıtlı' }); throw e; }
   res.json({ ok: true });
 }));
 

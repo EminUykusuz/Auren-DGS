@@ -10,6 +10,7 @@ import { query, tx } from '../db.js';
 import { requireAuth, requireStaff, validate, wrap } from '../security.js';
 import { isStaff } from '../kurum-lib.js';
 import { sendXlsx } from '../xlsx.js';
+import { notifyHomework } from '../mailer.js';
 import { readXlsx } from '../xlsx-read.js';
 import { parseDelimited, parseRecords, buildAssignments, parseDate, hwStatus, MAX_ASSIGN, MAX_ITEMS } from '../odev-lib.js';
 
@@ -97,6 +98,17 @@ r.get('/requests-count', ...requireStaff, wrap(async (req, res) => {
   res.json({ open: x.n });
 }));
 
+// Öğrencilere "yeni ödevin var" e-postası (SMTP ayarlıysa; e-postası olmayan atlanır). Beklenmez: yanıt gecikmez, hata ödevi bozmaz.
+// Kişisel pakette her öğrencinin maddesi farklı olduğundan çağrılar sıraya girer (her biri kendi aralığıyla gönderir).
+let mailQueue = Promise.resolve();
+function mailAssigned(req, targets, hw) {
+  const ctx = { inst: req.institutionId, me: req.userId };
+  mailQueue = mailQueue.then(async () => {
+    const [m] = await query(`SELECT COALESCE(u.FullName, u.Username) AS Name, i.Name AS Inst FROM dbo.Users u JOIN dbo.Institutions i ON i.Id=@inst WHERE u.Id=@me`, ctx);
+    await notifyHomework(targets, { ...hw, teacher: m?.Name ?? 'Öğretmenin', inst: m?.Inst ?? '' });
+  }).catch(e => console.error('[mail] kuyruk hatası:', String(e.message).slice(0, 160)));
+}
+
 /* ---------- Personel: sınıf ödevi ver ---------- */
 const createSchema = z.object({
   classId: z.number().int().positive(),
@@ -116,6 +128,8 @@ r.post('/homework', ...requireStaff, validate(createSchema), wrap(async (req, re
     for (let i = 0; i < d.items.length; i++) await q(`INSERT INTO dbo.HomeworkItems (HomeworkId, Pos, Topic, Target) VALUES (@h,@p,@t,@g)`, { h: h.Id, p: i + 1, t: d.items[i].topic, g: d.items[i].target ?? null });
     return h.Id;
   });
+  const classStu = await query(`SELECT Id FROM dbo.Users WHERE ClassId=@c AND Role='student' AND IsDisabled=0`, { c: d.classId });
+  mailAssigned(req, classStu.map(s => ({ id: s.Id, due: d.dueDate })), { title: d.title, items: d.items, personal: false });
   res.status(201).json({ id });
 }));
 
@@ -177,6 +191,7 @@ r.post('/homework/personal', ...requireStaff, validate(personalSchema), wrap(asy
     }
     return d.assignments.length;
   });
+  for (const a of d.assignments) mailAssigned(req, [{ id: a.studentId, due: a.dueDate ?? d.dueDate }], { title: d.title, items: a.items, personal: true });
   res.status(201).json({ batchId, created });
 }));
 

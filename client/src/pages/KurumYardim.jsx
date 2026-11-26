@@ -29,6 +29,7 @@ export default function KurumYardim() {
         ['Şablonu indir', 'Ödev sekmesinde "Kişiye özel ödev" düğmesine bas, "Şablonu indir" de. Excel\'de kapsamındaki öğrencilerin numarası ve adı hazır gelir.'],
         ['Konuları yaz', 'Her satır bir öğrencinin bir konusudur: Konu, Hedef soru, Teslim tarihi. Aynı öğrenciye birden fazla konu vermek için satırı kopyala. Konusu boş satır ödev almaz.'],
         ['Yükle ve kontrol et', '"Excel / CSV yükle" ile dosyayı seç (ya da Excel\'den kopyalayıp yapıştır). Sistem öğrencileri numaraya, numara yoksa ada göre eşler; eşleşmeyen satırları nedeniyle birlikte gösterir. Tarihleri burada öğrenci başına düzeltebilirsin.'],
+        ['Öğrenciye e-posta gider', 'Öğrencinin e-posta adresi varsa (Öğrenciler sekmesinde kalem simgesiyle eklenir) ödev verilince "Yeni ödevin var" e-postası otomatik gider. Adresi olmayan öğrenci ödevi yine panelden görür.'],
         ['Gönder', '"Öğrenciye gönder" dediğinde her öğrenci yalnızca kendi ödevini görür. Öğrenci listesinden öğrenci seçip "Ödev ver" ile de aynı ekrana geçebilirsin.'],
       ]} />
       <Note>Öğrenci sınıf değiştirse bile kişisel ödevi kendisinde kalır; öğretmen ise ödevi öğrencinin şu anki sınıfına göre görür.</Note>

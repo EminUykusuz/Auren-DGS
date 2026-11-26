@@ -55,7 +55,7 @@ test.before(async () => {
 test.after(async () => {
   await query(`DELETE FROM dbo.Homework WHERE InstitutionId IN (${inst1}, ${inst2})`);
   await query(`DELETE FROM dbo.TeacherClasses WHERE ClassId IN (${cA}, ${cB}, ${cX})`);
-  await query(`DELETE FROM dbo.Users WHERE Email LIKE '%.${sfx}@test.local'`);
+  await query(`DELETE FROM dbo.Users WHERE InstitutionId IN (${inst1}, ${inst2}) OR Email LIKE '%.${sfx}@test.local'`);
   await query(`DELETE FROM dbo.Classes WHERE InstitutionId IN (${inst1}, ${inst2})`);
   await query(`DELETE FROM dbo.Institutions WHERE Id IN (${inst1}, ${inst2})`);
   server.close(); setTimeout(() => process.exit(0), 100);
@@ -244,4 +244,21 @@ test('kişisel ödev: paket silinince ödevler, maddeler, onaylar ve yazışmala
   await OWN.call('POST', '/odev/homework/personal', payload([{ studentId: ids.s3, items: [it('Son konu')] }]));
   await assert.rejects(query(`DELETE FROM dbo.Users WHERE Id=@u`, { u: ids.s3 }));                                          // CASCADE yok: doğrudan silme engellenir
   await query(`DELETE FROM dbo.Homework WHERE UserId=@u`, { u: ids.s3 }); await query(`DELETE FROM dbo.Users WHERE Id=@u`, { u: ids.s3 });
+});
+
+test('e-posta bildirimi: personel öğrenci e-postası ekler/kaldırır; yinelenen e-posta 409; liste yer tutucuyu göstermez; ödev e-posta ayarsızken bozulmaz', async () => {
+  const mail = `veli.${sfx}@test.local`;
+  assert.equal((await OWN.call('PATCH', `/kurum/students/${ids.s1}`, { email: mail })).status, 200);
+  let list = (await OWN.call('GET', '/kurum/students')).json.students;
+  assert.equal(list.find(s => s.id === ids.s1).email, mail); assert.notEqual(list.find(s => s.id === ids.s2).email, mail);
+  assert.equal((await OWN.call('PATCH', `/kurum/students/${ids.s2}`, { email: mail })).status, 409);                          // aynı adres başka hesapta
+  assert.equal((await OWN.call('PATCH', `/kurum/students/${ids.s2}`, { email: 'x@ogrenci.invalid' })).status, 400);
+  assert.equal((await OWN.call('PATCH', `/kurum/students/${ids.s2}`, { email: 'gecersiz' })).status, 400);
+  assert.equal((await TEA.call('PATCH', `/kurum/students/${ids.s2}`, { email: `b.${sfx}@test.local` })).status, 404);          // öğretmenin sınıfı değil
+  assert.equal((await OTHER.call('PATCH', `/kurum/students/${ids.s1}`, { email: `c.${sfx}@test.local` })).status, 404);
+  const r = await OWN.call('POST', '/odev/homework/personal', payload([{ studentId: ids.s1, items: [it('Bildirim denemesi')] }]));
+  assert.equal(r.status, 201);                                                                                               // SMTP yok: sessizce atlanır, ödev yine verilir
+  assert.equal((await OWN.call('PATCH', `/kurum/students/${ids.s1}`, { email: null })).status, 200);                          // kaldır → yer tutucuya döner
+  list = (await OWN.call('GET', '/kurum/students')).json.students; assert.equal(list.find(s => s.id === ids.s1).email, null);
+  const [u] = await query(`SELECT Email FROM dbo.Users WHERE Id=@u`, { u: ids.s1 }); assert.match(u.Email, /@ogrenci\.invalid$/);
 });

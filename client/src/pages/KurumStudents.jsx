@@ -126,7 +126,7 @@ export default function Students() {
     setOk(`${out.moved} öğrenci taşındı${out.unchanged ? `, ${out.unchanged} zaten o sınıftaydı` : ''}.`); setSel(new Set()); setTarget(''); setReason(''); list.reload(); cls.reload();
   });
   const [edit, setEdit] = useState(null);   // { id, fullName, studentNo }
-  const saveEdit = () => run(async () => { await api('PATCH', '/kurum/students/' + edit.id, { fullName: edit.fullName.trim(), studentNo: edit.studentNo.trim() || null }); setEdit(null); list.reload(); });
+  const saveEdit = () => run(async () => { await api('PATCH', '/kurum/students/' + edit.id, { fullName: edit.fullName.trim(), studentNo: edit.studentNo.trim() || null, email: edit.email.trim() || null }); setEdit(null); list.reload(); });
   // Satırdaki sınıf seçicisi: seçince hemen taşır (geçmişe yazılır)
   const changeClass = (s, v) => run(async () => {
     await post('/kurum/students/transfer', { moves: [{ studentId: s.id, toClassId: v === '' ? null : Number(v) }], reason: 'Öğrenci listesinden değiştirildi' });
@@ -177,8 +177,8 @@ export default function Students() {
             <tr key={s.id} className={clsx('border-t border-white/[0.05]', s.isDisabled && 'opacity-50')}>
               <td className="px-3 py-2"><input type="checkbox" className="!h-4 !w-4" checked={sel.has(s.id)} onChange={() => toggle(s.id)} aria-label={`${s.fullName} seç`} /></td>
               <td className="px-3 py-2 text-slate-100">{edit?.id === s.id
-                ? <input aria-label="Ad soyad" value={edit.fullName} onChange={e => setEdit({ ...edit, fullName: e.target.value })} maxLength={80} onKeyDown={e => { if (e.key === 'Enter' && edit.fullName.trim().length >= 3) saveEdit(); if (e.key === 'Escape') setEdit(null); }} autoFocus />
-                : <span className="inline-flex items-center gap-2">{s.fullName || '—'}<button className="text-slate-500 hover:text-slate-200" onClick={() => setEdit({ id: s.id, fullName: s.fullName ?? '', studentNo: s.studentNo ?? '' })} aria-label={s.fullName + ' adını düzenle'}><Pencil size={12} /></button></span>}</td>
+                ? <span className="block space-y-1"><input aria-label="Ad soyad" value={edit.fullName} onChange={e => setEdit({ ...edit, fullName: e.target.value })} maxLength={80} onKeyDown={e => { if (e.key === 'Enter' && edit.fullName.trim().length >= 3) saveEdit(); if (e.key === 'Escape') setEdit(null); }} autoFocus /><input aria-label="E-posta (ödev bildirimi için, isteğe bağlı)" type="email" placeholder="E-posta (ödev bildirimi)" value={edit.email} onChange={e => setEdit({ ...edit, email: e.target.value })} maxLength={254} /></span>
+                : <span className="inline-flex flex-wrap items-center gap-x-2">{s.fullName || '—'}{s.email && <span className="w-full text-xs text-slate-500" title="Ödev bildirimleri bu adrese gider">{s.email}</span>}<button className="text-slate-500 hover:text-slate-200" onClick={() => setEdit({ id: s.id, fullName: s.fullName ?? '', studentNo: s.studentNo ?? '', email: s.email ?? '' })} aria-label={s.fullName + ' adını düzenle'}><Pencil size={12} /></button></span>}</td>
               <td className="px-3 py-2 font-mono text-xs">{s.username}</td>
               <td className="px-3 py-2">{edit?.id === s.id
                 ? <span className="flex items-center gap-1"><input aria-label="Öğrenci no" className="!w-24" value={edit.studentNo} onChange={e => setEdit({ ...edit, studentNo: e.target.value })} maxLength={20} /><button className="btn !px-2 !py-1" disabled={busy || edit.fullName.trim().length < 3} onClick={saveEdit} aria-label="Kaydet"><Check size={13} /></button><button className="btn-ghost !px-2 !py-1" onClick={() => setEdit(null)} aria-label="Vazgeç"><X size={13} /></button></span>
