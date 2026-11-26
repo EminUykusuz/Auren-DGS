@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { get, post, del, net, fmt, today } from '../lib/api.js';
+import { get, post, del, net, wrongDiv, fmt, today } from '../lib/api.js';
 import { useExamCfg } from '../store.js';
 import { firstTopic } from '../lib/topics.js';
 import { Page, Item, Title } from '../components/ui.jsx';
@@ -57,7 +57,7 @@ export default function Study() {
               <div><label htmlFor="w">Yanlış</label><input id="w" type="number" min={0} value={f.wrongCount} onChange={num('wrongCount')} /></div>
             </div>
             <div className="flex items-center justify-between pt-1">
-              <div className="text-sm text-slate-400">Net <span className="num ml-1 text-xl font-semibold text-accent">{fmt(net(f.correctCount, f.wrongCount))}</span></div>
+              <div className="text-sm text-slate-400">Net <span className="num ml-1 text-xl font-semibold text-accent">{fmt(net(f.correctCount, f.wrongCount, wrongDiv(mode)))}</span></div>
               <button className="btn" disabled={invalid}>Kaydet</button>
             </div>
             {invalid && <p className="text-xs text-red-300">Doğru + yanlış, çözülen sorudan fazla olamaz</p>}

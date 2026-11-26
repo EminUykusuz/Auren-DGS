@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Trash2, ListChecks, X } from 'lucide-react';
 import clsx from 'clsx';
-import { get, post, put, del, net, fmt, today } from '../lib/api.js';
+import { get, post, put, del, net, wrongDiv, fmt, today } from '../lib/api.js';
 import { useExam, useExamCfg } from '../store.js';
 import { Page, Item, Title } from '../components/ui.jsx';
 import SortTable from '../components/SortTable.jsx';
@@ -70,7 +70,7 @@ export default function Exams() {
   const setAns = (key, field) => v => setRes(p => ({ ...p, [key]: { ...(p[key] ?? { correct: 0, wrong: 0 }), [field]: v } }));
   const bad = Object.fromEntries(sections.map(s => [s.key, R[s.key].correct + R[s.key].wrong > s.max]));
   const anyBad = Object.values(bad).some(Boolean);
-  const nets = Object.fromEntries(sections.map(s => [s.key, net(R[s.key].correct, R[s.key].wrong)]));
+  const nets = Object.fromEntries(sections.map(s => [s.key, net(R[s.key].correct, R[s.key].wrong, wrongDiv(mode))]));
   const total = sections.reduce((s, x) => s + nets[x.key], 0);
   const wrongTotal = sections.reduce((s, x) => s + R[x.key].wrong, 0);
 
@@ -150,7 +150,7 @@ export default function Exams() {
               <div className="text-sm text-slate-400">Toplam net <span className="num ml-1 text-2xl font-semibold text-slate-50">{fmt(total)}</span></div>
               <button className="btn" disabled={anyBad || !meta.examName.trim()}>Kaydet</button>
             </div>
-            <p className="text-xs text-slate-500">4 yanlış 1 doğruyu götürür: Net = Doğru − Yanlış × 0,25 · kayıtta sunucu yeniden hesaplar</p>
+            <p className="text-xs text-slate-500">{mode === 'LGS' ? '3 yanlış 1 doğruyu götürür: Net = Doğru − Yanlış ÷ 3' : '4 yanlış 1 doğruyu götürür: Net = Doğru − Yanlış × 0,25'} · kayıtta sunucu yeniden hesaplar</p>
             {err && <p role="alert" className="text-xs text-red-300">{err}</p>}
           </form>
         </Item>

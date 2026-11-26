@@ -48,7 +48,7 @@ export default function InstitutionsTab() {
       <form onSubmit={create} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div><label htmlFor="i-n">Kurum adı</label><input id="i-n" value={f.name} onChange={set('name')} required minLength={2} maxLength={100} /></div>
         <div><label htmlFor="i-s">Adres (isteğe bağlı)</label><input id="i-s" value={f.slug} onChange={set('slug')} placeholder="isikdershanesi" pattern="[a-z0-9]{3,40}" title="3-40 küçük harf/rakam" /></div>
-        <div><label htmlFor="i-t">Hazırlık</label><select id="i-t" value={f.examTrack} onChange={set('examTrack')}><option value="BOTH">DGS + YKS</option><option value="DGS">DGS</option><option value="YKS">YKS</option></select></div>
+        <div><label htmlFor="i-t">Hazırlık</label><select id="i-t" value={f.examTrack} onChange={set('examTrack')}><option value="BOTH">DGS + YKS</option><option value="LGS">LGS (8. sınıf)</option><option value="DGS">DGS</option><option value="YKS">YKS</option></select></div>
         <div><label htmlFor="i-o1">Yönetici adı</label><input id="i-o1" value={f.ownerFirstName} onChange={set('ownerFirstName')} required maxLength={40} /></div>
         <div><label htmlFor="i-o2">Yönetici soyadı</label><input id="i-o2" value={f.ownerLastName} onChange={set('ownerLastName')} required maxLength={40} /></div>
         <div><label htmlFor="i-l">Öğrenci kotası</label><input id="i-l" type="number" min={1} value={f.studentLimit} onChange={set('studentLimit')} placeholder="sınırsız" /></div>

@@ -19,6 +19,8 @@ export const put = (p, b) => api('PUT', p, b);
 export const del = p => api('DELETE', p);
 
 // Sunucudaki calc.js ile aynı formül (yalnızca önizleme; kayıtta sunucu yeniden hesaplar)
-export const net = (c, w) => (c * 4 - w) / 4;
+// div: kaç yanlış bir doğruyu götürür (DGS/YKS 4, LGS 3)
+export const wrongDiv = (mode) => (mode === 'LGS' ? 3 : 4);
+export const net = (c, w, div = 4) => (div === 4 ? (c * 4 - w) / 4 : Math.round((c - w / div) * 100) / 100);
 export const fmt = n => Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 export const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };

@@ -180,7 +180,7 @@ export function Register() {
           <TrackPicker value={track} onChange={setTrack} id="reg-track" />
           <AnimatePresence mode="wait" initial={false}>
             <motion.p key={track} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="mt-2 text-xs text-slate-500">
-              {track === 'DGS' ? 'Panelde yalnızca DGS müfredatı, denemeleri ve geri sayımı olur.' : track === 'YKS' ? 'Panelde TYT ve AYT müfredatı, denemeleri ve geri sayımı olur.' : 'DGS ve YKS birlikte açılır; üst çubuktan tek dokunuşla geçersin, veriler ayrı kalır.'}
+              {track === 'DGS' ? 'Panelde yalnızca DGS müfredatı, denemeleri ve geri sayımı olur.' : track === 'YKS' ? 'Panelde TYT ve AYT müfredatı, denemeleri ve geri sayımı olur.' : track === 'LGS' ? 'Panelde LGS dersleri, denemeleri (3 yanlış 1 doğru) ve geri sayımı olur. LGS hesabı DGS/YKS ile karışmaz.' : 'DGS ve YKS birlikte açılır; üst çubuktan tek dokunuşla geçersin, veriler ayrı kalır.'}
             </motion.p>
           </AnimatePresence>
         </motion.fieldset>

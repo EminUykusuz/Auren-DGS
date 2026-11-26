@@ -152,7 +152,7 @@ function Target() {
         <div><label htmlFor="tu">Hedef üniversite</label><input id="tu" maxLength={120} value={f.targetUniversity} onChange={e => setF(p => ({ ...p, targetUniversity: e.target.value }))} placeholder="Örn. Boğaziçi Üniversitesi" autoComplete="off" /></div>
         <div><label htmlFor="td">Hedef bölüm</label><input id="td" maxLength={120} value={f.targetDepartment} onChange={e => setF(p => ({ ...p, targetDepartment: e.target.value }))} placeholder="Örn. Bilgisayar Mühendisliği" autoComplete="off" /></div>
         <div><label htmlFor="ed">{mode} sınav tarihi</label><input id="ed" type="date" min={new Date().toISOString().slice(0, 10)} value={f.examDate} onChange={e => setF(p => ({ ...p, examDate: e.target.value }))} />
-          <p className="mt-1 text-xs text-slate-500">Boş bırakırsan geri sayım tahmini tarihi gösterir ({mode === 'DGS' ? 'bir sonraki 19 Temmuz' : "Haziran'ın 3. cumartesi"}). ÖSYM kesin tarihi açıklayınca buraya gir. DGS ve YKS tarihleri ayrı saklanır.</p></div>
+          <p className="mt-1 text-xs text-slate-500">Boş bırakırsan geri sayım tahmini tarihi gösterir ({mode === 'DGS' ? 'bir sonraki 19 Temmuz' : mode === 'LGS' ? "Haziran'ın 2. cumartesi" : "Haziran'ın 3. cumartesi"}). ÖSYM kesin tarihi açıklayınca buraya gir. DGS ve YKS tarihleri ayrı saklanır.</p></div>
         <div className="flex items-center gap-3"><button className="btn" disabled={state === 'saving'}>Kaydet</button>
           <span role="status" className="text-xs text-emerald-300">{state === 'saved' && 'Kaydedildi ✓'}</span></div>
         {err && <p role="alert" className="text-xs text-red-300">{err}</p>}

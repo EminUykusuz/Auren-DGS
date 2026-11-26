@@ -24,7 +24,7 @@ const USER_COLS = `u.Id, u.Username, u.Email, u.IsAdmin, u.ExamMode, u.ExamTrack
   i.Name AS InstName, i.Slug AS InstSlug, i.PrimaryColor AS InstColor, i.LogoVersion AS InstLogoVersion`;
 const USER_FROM = `dbo.Users u LEFT JOIN dbo.Institutions i ON i.Id = u.InstitutionId`;
 
-r.post('/register', authLimiter, validate(z.object({ username, email, password, examTrack: z.enum(['DGS', 'YKS', 'BOTH']).default('BOTH'), examMode: z.enum(['DGS', 'YKS']).optional() })), wrap(async (req, res) => {
+r.post('/register', authLimiter, validate(z.object({ username, email, password, examTrack: z.enum(['DGS', 'YKS', 'LGS', 'BOTH']).default('BOTH'), examMode: z.enum(['DGS', 'YKS', 'LGS']).optional() })), wrap(async (req, res) => {
   const { username: u, email: e, password: p, examTrack: t } = req.body;
   const x = t === 'BOTH' ? (req.body.examMode ?? 'DGS') : t;   // tek sınav seçildiyse mod sabittir; hibritte başlangıç modu
   const h = await bcrypt.hash(p, config.bcryptRounds);

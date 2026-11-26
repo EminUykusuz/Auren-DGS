@@ -5,9 +5,9 @@ import { get } from '../lib/api.js';
 import { Item } from './ui.jsx';
 import { useExam } from '../store.js';
 
-// Kullanıcı tarih girmediyse tahmini tarih: DGS → bir sonraki 19 Temmuz, YKS → Haziran'ın 3. cumartesi; ÖSYM kesin tarihi açıklayınca Ayarlar'dan güncellenir
+// Kullanıcı tarih girmediyse tahmini tarih: DGS → bir sonraki 19 Temmuz, YKS → Haziran'ın 3. cumartesi, LGS → Haziran'ın 2. cumartesi; ÖSYM kesin tarihi açıklayınca Ayarlar'dan güncellenir
 function estimate(mode, now = new Date()) {
-  const at = y => { if (mode === 'DGS') return new Date(y, 6, 19); const d = new Date(y, 5, 1); d.setDate(1 + ((6 - d.getDay() + 7) % 7) + 14); return d; };
+  const at = y => { if (mode === 'DGS') return new Date(y, 6, 19); if (mode === 'LGS') { const l = new Date(y, 5, 1); l.setDate(1 + ((6 - l.getDay() + 7) % 7) + 7); return l; } const d = new Date(y, 5, 1); d.setDate(1 + ((6 - d.getDay() + 7) % 7) + 14); return d; };
   const t = at(now.getFullYear()); return t > now ? t : at(now.getFullYear() + 1);
 }
 const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };   // yerel gece yarısı

@@ -3,13 +3,13 @@ import { create } from 'zustand';
 import { get, post, put } from './lib/api.js';
 
 const LS_MODE = 'auren_mode', LS_PART = 'auren_part';
-const valid = (m) => (m === 'DGS' || m === 'YKS' ? m : null);
+const valid = (m) => (m === 'DGS' || m === 'YKS' || m === 'LGS' ? m : null);
 
-// Sınav modu (DGS | YKS): kalıcı tercih hem tarayıcıda (anında) hem sunucuda (cihazlar arası) saklanır.
+// Sınav modu (DGS | YKS | LGS): kalıcı tercih hem tarayıcıda (anında) hem sunucuda (cihazlar arası) saklanır.
 // Sunucu yapılandırması (bölümler, soru sayıları, müfredat) /api/exams-config'ten gelir.
 export const useExam = create((set, getState) => ({
   mode: valid(localStorage.getItem(LS_MODE)) ?? 'DGS',
-  parts: { DGS: 'DGS', YKS: localStorage.getItem(LS_PART) === 'AYT' ? 'AYT' : 'TYT' },
+  parts: { DGS: 'DGS', LGS: 'LGS', YKS: localStorage.getItem(LS_PART) === 'AYT' ? 'AYT' : 'TYT' },
   config: null,
   async loadConfig() { try { set({ config: await get('/exams-config') }); } catch { /* sunucu yoksa App hata gösterir */ } },
   // Sunucudaki tercih kazanır (başka cihazda değiştirilmiş olabilir)

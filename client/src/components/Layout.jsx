@@ -116,7 +116,7 @@ export function Shell() {
       <main className={clsx('mx-auto max-w-[1680px] px-4 pb-28 pt-6 transition-[padding] duration-300 md:pb-10 md:pr-6', collapsed ? 'md:pl-[6.5rem]' : 'md:pl-[15.5rem]')}>
         <div className="sticky top-3 z-20 -mt-1 mb-4 flex items-center justify-between gap-3">
           {staff ? <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">{inst?.name}</span><span aria-hidden="true">·</span><span>Kurum paneli</span></div> : <>
-          <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">Auren Study <span className="text-accent">{mode}</span></span><span aria-hidden="true">·</span><span>{mode === 'DGS' ? 'Dikey Geçiş Sınavı' : 'TYT · AYT'}</span></div>
+          <div className="glass-pill hidden items-center gap-2 px-4 py-2 text-xs text-slate-400 sm:flex"><span className="font-semibold text-slate-100">Auren Study <span className="text-accent">{mode}</span></span><span aria-hidden="true">·</span><span>{mode === 'DGS' ? 'Dikey Geçiş Sınavı' : mode === 'LGS' ? '8. sınıf · LGS' : 'TYT · AYT'}</span></div>
           {user.examTrack === 'BOTH' ? <ModeSwitch className="ml-auto" /> : <span className="badge ml-auto bg-accent/15 text-accent">{mode} hesabı</span>}</>}
         </div>
         <div key={seg + mode + part} className="fade-in"><Suspense fallback={<Fallback />}><Outlet /></Suspense></div>

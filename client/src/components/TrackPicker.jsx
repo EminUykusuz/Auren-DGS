@@ -1,17 +1,18 @@
 import { motion } from 'framer-motion';
-import { GraduationCap, Layers, School } from 'lucide-react';
+import { BookOpen, GraduationCap, Layers, School } from 'lucide-react';
 import clsx from 'clsx';
 
-// Hazırlanılan sınav türü: DGS | YKS | BOTH (hibrit). Seçili kartın vurgusu kartlar arasında kayar.
+// Hazırlanılan sınav türü: DGS | YKS | LGS | BOTH (hibrit). LGS ayrıdır, DGS/YKS ile karışmaz. Seçili kartın vurgusu kartlar arasında kayar.
 export const TRACKS = [
   { id: 'DGS', icon: GraduationCap, name: 'DGS', sub: 'Dikey Geçiş Sınavı' },
   { id: 'YKS', icon: School, name: 'YKS', sub: 'TYT ve AYT' },
+  { id: 'LGS', icon: BookOpen, name: 'LGS', sub: '8. sınıf · 3 yanlış 1 doğru' },
   { id: 'BOTH', icon: Layers, name: 'Hibrit', sub: 'Her iki sınava da hazırlanıyorum' },
 ];
 
 export default function TrackPicker({ value, onChange, id = 'track', className = '' }) {
   return (
-    <div role="radiogroup" aria-label="Hazırlandığın sınav" className={clsx('grid gap-2 sm:grid-cols-3 sm:gap-2.5', className)}>
+    <div role="radiogroup" aria-label="Hazırlandığın sınav" className={clsx('grid gap-2 sm:grid-cols-2 lg:grid-cols-4 sm:gap-2.5', className)}>
       {TRACKS.map(({ id: t, icon: Icon, name, sub }) => {
         const on = value === t;
         return (

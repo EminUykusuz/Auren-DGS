@@ -15,12 +15,12 @@ r.use(requireAuth);
 
 const text = (max) => z.string().trim().max(max).transform(s => s.replace(/\s+/g, ' '));
 
-const dateCol = { DGS: 'ExamDate', YKS: 'YksExamDate' }; // sabit sütun adları (kullanıcı girdisi SQL'e girmez)
+const dateCol = { DGS: 'ExamDate', YKS: 'YksExamDate', LGS: 'LgsExamDate' }; // sabit sütun adları (kullanıcı girdisi SQL'e girmez)
 const examDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s => { const t = Date.parse(s + 'T00:00:00Z'); return !Number.isNaN(t) && t > Date.now() - 864e5 && t < Date.now() + 800 * 864e5; }, 'Sınav tarihi geçmişte olamaz ve en fazla ~2 yıl sonrası olabilir');
 
 r.get('/profile', wrap(async (req, res) => {
-  const [u] = await query(`SELECT Username, Email, FullName, AvatarUrl, TargetUniversity, TargetDepartment, ExamMode, ExamTrack, CONVERT(char(10), ExamDate, 23) AS ExamDate, CONVERT(char(10), YksExamDate, 23) AS YksExamDate FROM dbo.Users WHERE Id=@id`, { id: req.userId });
-  const examDates = { DGS: u.ExamDate ?? null, YKS: u.YksExamDate ?? null };
+  const [u] = await query(`SELECT Username, Email, FullName, AvatarUrl, TargetUniversity, TargetDepartment, ExamMode, ExamTrack, CONVERT(char(10), ExamDate, 23) AS ExamDate, CONVERT(char(10), YksExamDate, 23) AS YksExamDate, CONVERT(char(10), LgsExamDate, 23) AS LgsExamDate FROM dbo.Users WHERE Id=@id`, { id: req.userId });
+  const examDates = { DGS: u.ExamDate ?? null, YKS: u.YksExamDate ?? null, LGS: u.LgsExamDate ?? null };
   res.json({ username: u.Username, email: u.Email, fullName: u.FullName ?? '', avatarUrl: u.AvatarUrl ?? null, targetUniversity: u.TargetUniversity ?? '', targetDepartment: u.TargetDepartment ?? '',
     examMode: u.ExamMode, examTrack: u.ExamTrack, examDates, examDate: examDates[u.ExamMode] });
 }));
@@ -54,8 +54,10 @@ r.put('/profile/mode', validate(z.object({ examMode: z.enum(EXAM_TYPES) }).stric
 }));
 
 // Hazırlanılan sınav türü: DGS | YKS | BOTH (hibrit). Tek sınav seçilince aktif mod da ona çekilir.
-r.put('/profile/track', validate(z.object({ examTrack: z.enum(['DGS', 'YKS', 'BOTH']) }).strict()), wrap(async (req, res) => {
+r.put('/profile/track', validate(z.object({ examTrack: z.enum(['DGS', 'YKS', 'LGS', 'BOTH']) }).strict()), wrap(async (req, res) => {
   if (req.institutionId) return res.status(403).json({ error: 'Sınav türünü kurumun yöneticisi belirler' });
+  // LGS (8. sınıf) hesabı DGS/YKS ile karışmaz: LGS'ye ve LGS'den geçiş yapılmaz
+  if ((req.examTrack === 'LGS') !== (req.body.examTrack === 'LGS')) return res.status(403).json({ error: 'LGS hesabı DGS/YKS ile değiştirilemez; yeni hesap aç' });
   const t = req.body.examTrack, mode = t === 'BOTH' ? req.examMode : t;
   await query(`UPDATE dbo.Users SET ExamTrack=@t, ExamMode=@m WHERE Id=@id`, { t, m: mode, id: req.userId });
   res.json({ ok: true, examTrack: t, examMode: mode });

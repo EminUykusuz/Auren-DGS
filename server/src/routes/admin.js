@@ -116,7 +116,7 @@ r.get('/institutions', wrap(async (req, res) => {
 
 r.post('/institutions', validate(z.object({
   name: z.string().trim().min(2).max(100), slug: z.string().trim().toLowerCase().regex(SLUG_RE, 'Adres 3-40 küçük harf/rakam olmalı').optional(),
-  examTrack: z.enum(['DGS', 'YKS', 'BOTH']).default('BOTH'), studentLimit: z.number().int().min(1).max(100000).nullish(),
+  examTrack: z.enum(['DGS', 'YKS', 'LGS', 'BOTH']).default('BOTH'), studentLimit: z.number().int().min(1).max(100000).nullish(),
   ownerFirstName: z.string().trim().min(1).max(40), ownerLastName: z.string().trim().min(1).max(40),
 }).strict()), wrap(async (req, res) => {
   const d = req.body, slug = d.slug ?? makeSlug(d.name);
@@ -141,7 +141,7 @@ r.post('/institutions', validate(z.object({
 
 r.patch('/institutions/:id', validate(idParam, 'params'), validate(z.object({
   name: z.string().trim().min(2).max(100).optional(), isActive: z.boolean().optional(), studentLimit: z.number().int().min(1).max(100000).nullable().optional(),
-  examTrack: z.enum(['DGS', 'YKS', 'BOTH']).optional(),
+  examTrack: z.enum(['DGS', 'YKS', 'LGS', 'BOTH']).optional(),
 }).strict()), wrap(async (req, res) => {
   const d = req.body;
   const out = await query(`UPDATE dbo.Institutions SET Name=COALESCE(@n,Name), IsActive=COALESCE(@a,IsActive), ExamTrack=COALESCE(@t,ExamTrack),

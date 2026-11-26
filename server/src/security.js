@@ -106,6 +106,6 @@ export function resolveExam(req, res, next) {
   if (raw !== undefined && !isExamType(raw)) return res.status(400).json({ error: 'Geçersiz sınav türü' });
   // Tek sınava kayıtlı hesap yalnızca o sınavın verisine erişir; hibrit hesap ikisi arasında geçebilir
   const t = req.examTrack;
-  req.examType = (t === 'DGS' || t === 'YKS') ? t : (raw ?? req.examMode ?? 'DGS');
+  req.examType = t !== 'BOTH' && isExamType(t) ? t : (raw ?? req.examMode ?? 'DGS');
   next();
 }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
-import { TOPIC_KEYS, PARTS, partOf, defaultPartOf, EXAM_TYPES } from '../exams.js';
+import { TOPIC_KEYS, PARTS, partOf, defaultPartOf, EXAM_TYPES, WRONG_DIV } from '../exams.js';
 import { net, sectionNets } from '../calc.js';
 import { requireAuth, resolveExam, validate, wrap } from '../security.js';
 
@@ -36,7 +36,7 @@ r.get('/sessions', wrap(async (req, res) => {
   const part = req.query.part === undefined ? null : resolvePart(req, res, String(req.query.part)); if (req.query.part !== undefined && !part) return;
   const rows = await query(`SELECT TOP 200 Id, ExamPart, SubjectKey, TopicKey, DurationMinutes, QuestionsSolved, CorrectCount, WrongCount, CONVERT(char(10),StudyDate,23) AS StudyDate
     FROM dbo.StudySessions WHERE UserId=@me AND ExamType=@x AND (@p IS NULL OR ExamPart=@p) ORDER BY StudyDate DESC, Id DESC`, { me: req.userId, x: req.examType, p: part });
-  res.json({ examType: req.examType, part, sessions: rows.map(x => ({ ...x, Net: net(x.CorrectCount, x.WrongCount) })) });
+  res.json({ examType: req.examType, part, sessions: rows.map(x => ({ ...x, Net: net(x.CorrectCount, x.WrongCount, WRONG_DIV[req.examType]) })) });
 }));
 
 r.post('/sessions', validate(sessionSchema), wrap(async (req, res) => {
@@ -136,7 +136,7 @@ r.put('/exams/:id/errors', validate(idParam, 'params'), validate(z.object({ exam
 
 r.post('/exams', validate(examSchema), wrap(async (req, res) => {
   const d = req.body, x = req.examType;
-  const part = d.part ?? (x === 'DGS' ? 'DGS' : null);
+  const part = d.part ?? (Object.keys(PARTS[x]).length === 1 ? defaultPartOf(x) : null);
   const def = part && partOf(x, part);
   if (!def) return fail(res, 'part', `Geçerli bölümler: ${Object.keys(PARTS[x]).join(', ')}`);
   const keys = new Set(def.sections.map(s => s.key));
@@ -145,7 +145,7 @@ r.post('/exams', validate(examSchema), wrap(async (req, res) => {
     const a = d.results[s.key];
     if (a && a.correct + a.wrong > s.max) return fail(res, `results.${s.key}`, `${s.label}: doğru + yanlış en fazla ${s.max}`);
   }
-  const { nets, totalNet } = sectionNets(def.sections, d.results);
+  const { nets, totalNet } = sectionNets(def.sections, d.results, WRONG_DIV[x]);
   const wrongBy = Object.fromEntries(def.sections.map(s => [s.key, d.results[s.key]?.wrong ?? 0]));
   if (!errorsOk(d.errors ?? [], def.sections, wrongBy)) return fail(res, 'errors', 'Hata nedenleri toplamı yanlış sayısını aşamaz');
   const id = await tx(async q => {
@@ -168,8 +168,8 @@ r.delete('/exams/:id', validate(idParam, 'params'), wrap(async (req, res) => {
 }));
 
 // Önizleme hesaplayıcı: istemci ile sunucu aynı formülü kullanır
-r.post('/calc', validate(z.object({ correct: z.number().int().min(0).max(120), wrong: z.number().int().min(0).max(120) })), (req, res) =>
-  res.json({ net: net(req.body.correct, req.body.wrong) }));
+r.post('/calc', validate(z.object({ correct: z.number().int().min(0).max(120), wrong: z.number().int().min(0).max(120), examType })), (req, res) =>
+  res.json({ net: net(req.body.correct, req.body.wrong, WRONG_DIV[req.examType]) }));
 
 /* ---------- Konu ilerlemesi ---------- */
 r.get('/progress', wrap(async (req, res) => {
