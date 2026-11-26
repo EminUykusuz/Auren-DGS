@@ -34,7 +34,7 @@ export default function SupportCard({ compact = false }) {
 
   const body = d.configured ? (
     <div className="space-y-2.5">
-      <p className="text-sm leading-relaxed text-slate-300">Auren ücretsiz ve reklamsız kalsın diye geliştirilmeye devam ediyor. Destek olmak istersen aşağıdaki IBAN'a havale/EFT yaparken <b className="text-slate-100">açıklama kısmına kodunu</b> yaz; desteğin sana ait olarak eşleşsin.</p>
+      <p className="text-sm leading-relaxed text-slate-300">Auren Study ücretsiz ve reklamsız kalsın diye geliştirilmeye devam ediyor. Destek olmak istersen aşağıdaki IBAN'a havale/EFT yaparken <b className="text-slate-100">açıklama kısmına kodunu</b> yaz; desteğin sana ait olarak eşleşsin.</p>
       <CopyRow label="IBAN" value={d.iban} shown={group4(d.iban)} />
       {(d.holder || d.bank) && <div className="px-1 text-xs text-slate-400">{[d.holder && `Alıcı: ${d.holder}`, d.bank].filter(Boolean).join(' · ')}</div>}
       <CopyRow label="Açıklama kodun" value={d.code} />
@@ -45,14 +45,14 @@ export default function SupportCard({ compact = false }) {
   if (compact) return (
     <Item className="card !py-3">
       <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 text-left">
-        <span className="stat-label flex items-center gap-2"><Heart size={13} className="text-rose-400" /> Auren'e destek ol</span>
+        <span className="stat-label flex items-center gap-2"><Heart size={13} className="text-rose-400" /> Auren Study'ye destek ol</span>
         <ChevronDown size={16} className={`text-slate-400 transition ${open ? 'rotate-180' : ''}`} aria-hidden="true" /></button>
       {open && <div className="mt-3">{body}</div>}
     </Item>
   );
   return (
     <Item className="card">
-      <div className="stat-label mb-4 flex items-center gap-2"><Heart size={13} className="text-rose-400" /> Auren'e destek ol</div>
+      <div className="stat-label mb-4 flex items-center gap-2"><Heart size={13} className="text-rose-400" /> Auren Study'ye destek ol</div>
       {body}
     </Item>
   );

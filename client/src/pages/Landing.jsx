@@ -16,7 +16,7 @@ const MAIL = import.meta.env.VITE_CONTACT_EMAIL || '';
 const IMG = (f) => `/landing/${f}`;
 
 const FAQ = [
-  ['Fiyat', 'Auren ücretsiz mi?', 'Evet. Hesap açmak ve bireysel özelliklerin tümünü kullanmak ücretsizdir.'],
+  ['Fiyat', 'Auren Study ücretsiz mi?', 'Evet. Hesap açmak ve bireysel özelliklerin tümünü kullanmak ücretsizdir.'],
   ['Hibrit', 'İkisine birden hazırlanabilir miyim?', 'Kayıtta hibrit hesabı seç. İki sınavın modüllerini birlikte açar; üst çubuktan tek dokunuşla geçersin. Verilerin her sınav için ayrı tutulur.'],
   ['Geçiş', 'Sınav türümü sonra değiştirebilir miyim?', 'Evet. Ayarlar sayfasından DGS, YKS ya da hibrit arasında geçiş yapabilirsin. Mevcut verilerin silinmez.'],
   ['Netler', 'TYT ve AYT netlerim karışır mı?', 'Karışmaz. Karşılaştırma ve trend grafikleri TYT ile AYT için ayrı çalışır.'],
@@ -60,7 +60,7 @@ function Calc() {
           {PARTS.map(([l], i) => <button key={l} role="tab" type="button" aria-selected={k === i} onClick={() => setK(i)}>{l}</button>)}
         </div>
         <h2 style={{ marginTop: 28 }}>Kendi netini şimdi hesapla.</h2>
-        <p className="d">Doğru ve yanlış sayını yaz. Her dört yanlış bir doğruyu götürür; Auren bunu senin yerine hesaplar.</p>
+        <p className="d">Doğru ve yanlış sayını yaz. Her dört yanlış bir doğruyu götürür; Auren Study bunu senin yerine hesaplar.</p>
       </div>
       <table className="ln-sheet">
         <thead><tr><th scope="col">Bölüm</th><th scope="col">Doğru</th><th scope="col">Yanlış</th><th scope="col" style={{ textAlign: 'right' }}>Net</th></tr></thead>
@@ -126,7 +126,7 @@ function Coupon() {
   const [f, setF] = useState({ kurum: '', ad: '', sayi: '100-300' });
   const send = (e) => {
     e.preventDefault();
-    const body = `Kurum: ${f.kurum}\nYetkili: ${f.ad}\nÖğrenci sayısı: ${f.sayi}\n\nAuren kurum paneli hakkında bilgi almak istiyoruz.`;
+    const body = `Kurum: ${f.kurum}\nYetkili: ${f.ad}\nÖğrenci sayısı: ${f.sayi}\n\nAuren Study kurum paneli hakkında bilgi almak istiyoruz.`;
     window.location.href = MAIL ? `mailto:${MAIL}?subject=${encodeURIComponent('Kurum paneli: ' + f.kurum)}&body=${encodeURIComponent(body)}` : 'https://instagram.com/eminuyksz';
   };
   const set = (k) => (e) => setF(s => ({ ...s, [k]: e.target.value }));
@@ -186,7 +186,7 @@ export default function Landing() {
       <JsonLd data={LD} />
       <a href="#ana" className="ln-sr">İçeriğe geç</a>
       <header className="ln-top">
-        <Link to="/" className="ln-mark" aria-label="Auren ana sayfa" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Logo size={30} leg="#2c3620" dot="#1c1c1c" />Auren</Link>
+        <Link to="/" className="ln-mark" aria-label="Auren Study ana sayfa" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Logo size={30} leg="#2c3620" dot="#1c1c1c" />Auren Study</Link>
         <nav className="ln-links" aria-label="Ana menü"><a href="#hesapla">Net hesabı</a><a href="#ozellikler">Özellikler</a><a href="#dershane">Dershaneler</a><a href="#sss">SSS</a></nav>
         <div className="ln-top-act"><Link to="/giris" className="ln-btn plain">Giriş</Link></div>
       </header>
@@ -196,7 +196,7 @@ export default function Landing() {
           <article className="ln-card">
             <i className="ln-corner tl" aria-hidden="true" /><i className="ln-corner tr" aria-hidden="true" />
                         <h1 id="hero-h"><span>Denemelerin</span><span>konuşuyor.</span></h1>
-            <p className="sub">DGS ve YKS denemelerini kaydet; Auren her yanlışın nedenini, her konunun gücünü ve haftalık ilerlemeni gösterir.</p>
+            <p className="sub">DGS ve YKS denemelerini kaydet; Auren Study her yanlışın nedenini, her konunun gücünü ve haftalık ilerlemeni gösterir.</p>
             <p className="facts"><span>DGS</span><i aria-hidden="true" /><span>TYT</span><i aria-hidden="true" /><span>AYT</span><i aria-hidden="true" /><span>Ücretsiz</span></p>
             <div className="acts">
               <Link to="/kayit" className="ln-btn olive">Ücretsiz başla</Link>

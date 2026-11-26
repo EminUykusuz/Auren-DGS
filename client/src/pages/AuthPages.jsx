@@ -31,7 +31,7 @@ export function Frame({ title, subtitle, children, footer, brand, hideHome }) {
         <motion.div initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring, stiffness: 180 }} className="card w-full max-w-md !p-5 sm:!p-7">
           <motion.div variants={list} initial="hidden" animate="show">
             <motion.div variants={item} className="mb-6 flex items-center gap-3 text-xl font-bold text-slate-100">
-              {brand ? (<>{logoUrl(brand) && <img src={logoUrl(brand)} alt="" className="h-10 max-w-[140px] rounded-lg object-contain" />}<span className="truncate">{brand.name}</span></>) : 'Auren'}
+              {brand ? (<>{logoUrl(brand) && <img src={logoUrl(brand)} alt="" className="h-10 max-w-[140px] rounded-lg object-contain" />}<span className="truncate">{brand.name}</span></>) : 'Auren Study'}
             </motion.div>
             <motion.h1 variants={item} className="text-2xl font-semibold tracking-tight text-slate-50">{title}</motion.h1>
             <motion.p variants={item} className="mb-5 mt-1.5 min-h-[1.25rem] text-sm text-slate-400">{subtitle}</motion.p>
