@@ -91,6 +91,8 @@ GO
 IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_SP')
   ALTER TABLE dbo.SubjectProgress DROP CONSTRAINT UQ_SP;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_SP_Type')
+-- Yalnızca 008'den ÖNCE kurulur: 008 bu kısıtı bölüm bazlı UQ_SP_Part ile değiştirir. Migration'lar her deploy'da yeniden çalıştığı için
+-- bu koşul olmazsa aynı konu TYT ve AYT'de çalışılmışken (iki satır) eski kısıt kurulamaz ve deploy düşer.
+IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'UQ_SP_Type') AND COL_LENGTH('dbo.SubjectProgress', 'ExamPart') IS NULL
   ALTER TABLE dbo.SubjectProgress ADD CONSTRAINT UQ_SP_Type UNIQUE (UserId, ExamType, SubjectKey, TopicKey);
 GO
