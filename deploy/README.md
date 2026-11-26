@@ -27,7 +27,7 @@ Elle tetikleme: *Actions → Deploy → Run workflow*.
 
 ## Güvenlik notu
 
-Self-hosted runner repo kodunu VDS'te çalıştırır. Repo herkese açık olduğundan workflow yalnızca `main`'e **push** (yazma yetkisi gerekir) ve elle tetiklemeyle çalışır; `pull_request` tetikleyicisi EKLEME. Runner kurulu olduğu `C:UsersAdministratoractions-runner` yolunun üst klasörlerini `NETWORK SERVICE` hesabı listeleyebilmelidir; "Access to the path C:UsersAdministrator is denied" hatasıyla servis hemen kapanıyorsa şunu çalıştır (alt klasörlere yayılmaz): `icacls C:UsersAdministrator /grant "NT AUTHORITYNETWORK SERVICE:(RX)"` ve servisi başlat. Servis durumu: `Get-Service actions.runner.*`.
+Self-hosted runner repo kodunu VDS'te çalıştırır. Repo herkese açık olduğundan workflow yalnızca `main`'e **push** (yazma yetkisi gerekir) ve elle tetiklemeyle çalışır; `pull_request` tetikleyicisi EKLEME. Runner kurulu olduğu `C:\Users\Administrator\actions-runner` yolunun üst klasörlerini `NETWORK SERVICE` hesabı listeleyebilmelidir; "Access to the path C:\Users\Administrator is denied" hatasıyla servis hemen kapanıyorsa şunu çalıştır (alt klasörlere yayılmaz): `icacls C:\Users\Administrator /grant "NT AUTHORITY\NETWORK SERVICE:(RX)"` ve servisi başlat. Servis durumu: `Get-Service actions.runner.*`.
 
 ## İletişim e-postası (yasal sayfalar)
 
