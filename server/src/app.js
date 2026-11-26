@@ -28,9 +28,9 @@ app.use(cors({
   origin: (o, cb) => (!o || config.origins.includes(o)) ? cb(null, true) : cb(new Error('CORS')),
   credentials: true,
 }));
-// Kurum içe aktarma (yüzlerce öğrenci) için daha büyük gövde; yalnızca bu yolda. Genel ayrıştırıcı zaten ayrışmış gövdeyi atlar.
+// Kurum içe aktarma (yüzlerce öğrenci) ve toplu kişisel ödev (≤200 öğrenci × ≤60 madde) için daha büyük gövde; yalnızca bu yollarda. Genel ayrıştırıcı zaten ayrışmış gövdeyi atlar.
 app.use('/api/kurum', express.json({ limit: '256kb' }));
-app.use('/api/odev', express.json({ limit: '64kb' }));
+app.use('/api/odev', express.json({ limit: '1mb' }));
 app.use(express.json({ limit: '20kb' }));
 app.use(cookieParser());
 // İndekslenecek herkese açık sayfalar (client/public/sitemap.xml ile aynı). Diğer her yol (API, panel, giriş, kayıt, bilinmeyen) noindex:

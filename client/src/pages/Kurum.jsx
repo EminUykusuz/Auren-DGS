@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { get, post, put, del, api } from '../lib/api.js';
 import { useAuth } from '../store.js';
 import { useLoad } from '../lib/useLoad.js';
+import { usePoll } from '../lib/poll.js';
 import { logoUrl } from '../lib/kurum.js';
 import { Page, Item, Title, Stat, Bar } from '../components/ui.jsx';
 
@@ -19,6 +20,8 @@ const Err = ({ children }) => children ? <p role="alert" className="rounded-2xl 
 const Spin = () => <div className="flex justify-center py-10 text-slate-500" role="status"><Loader2 className="animate-spin" size={18} aria-label="Yükleniyor" /></div>;
 
 function Tabs({ owner }) {
+  const [reqs, setReqs] = useState(0);   // yanıt bekleyen teslim tarihi talepleri
+  usePoll(() => { get('/odev/requests-count').then(r => setReqs(r.open)).catch(() => {}); }, 60000);
   const tabs = [['/kurum', 'Genel', Users, true], ['/kurum/ogrenciler', 'Öğrenciler', GraduationCap], ['/kurum/siniflar', 'Sınıflar', School],
     ['/kurum/odev', 'Ödev', ClipboardList], ['/kurum/yerlestirme', 'Sınıf değiştirme', ArrowRightLeft], ...(owner ? [['/kurum/ogretmenler', 'Öğretmenler', UserCheck]] : []),
     ['/kurum/gecmis', 'Geçmiş', HistoryIcon], ...(owner ? [['/kurum/marka', 'Marka', Palette]] : []), ['/kurum/yardim', 'Nasıl kullanılır', CircleHelp]];
@@ -28,7 +31,7 @@ function Tabs({ owner }) {
         <NavLink key={to} to={to} end={end} className={({ isActive }) => clsx('relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm transition', isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200')}>
           {({ isActive }) => (<>
             {isActive && <motion.span layoutId="kurum-tab" className="absolute inset-0 rounded-full bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,.18)]" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
-            <Icon size={16} strokeWidth={1.8} className="relative" /><span className="relative hidden md:inline">{l}</span></>)}
+            <span className="relative flex"><Icon size={16} strokeWidth={1.8} />{to === '/kurum/odev' && reqs > 0 && <span className="num absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-onaccent" aria-label={reqs + ' tarih talebi bekliyor'}>{reqs}</span>}</span><span className="relative hidden md:inline">{l}</span></>)}
         </NavLink>))}
     </Item>
   );

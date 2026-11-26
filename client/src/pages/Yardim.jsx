@@ -63,6 +63,9 @@ export default function Yardim() {
         <Steps items={[
           ['Maddeleri işaretle', 'Ödevler sayfasında her madde için konuyu ve hedef soru sayısını görürsün. Bitirdiklerini işaretle; öğretmenin ilerlemeni görür.', '/odev', 'Ödevler'],
           ['Kâğıdı indir', 'Excel olarak ödev kâğıdını ya da öğretmenin eklediyse ödev dosyasını indirebilirsin.'],
+          ['Sana özel ödevler', 'Öğretmenin sana özel ödev de verebilir; "Sana özel" etiketiyle görünür ve yalnızca sen görürsün. Menüdeki sayı, teslim etmediğin ödevlerinin sayısıdır.'],
+          ['Bitirdim de', 'Ödevin bitince "Ödevi bitirdim" düğmesine bas; tüm maddeler tamamlandı sayılır ve öğretmenin görür. Yanlışlıkla bastıysan "Geri al" diyebilirsin.'],
+          ['Teslim gününü konuş', 'Süre yetmiyorsa ödevin altındaki "Teslim tarihini öğretmenle konuş" bölümünden yeni bir tarih iste ve kısa bir not yaz. Öğretmenin kabul eder, reddeder ya da kendi tarihini yazar; yeni tarih ödevinde görünür.'],
         ]} />
       </Block>}
 

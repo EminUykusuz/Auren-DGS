@@ -110,6 +110,7 @@ r.post('/profile/delete-account', delLimiter, validate(z.object({ password: z.st
   if (!(await bcrypt.compare(req.body.password, u.PasswordHash))) return res.status(403).json({ error: 'Şifre yanlış' });
   await tx(async q => {
     await q(`DELETE FROM dbo.Friendships WHERE RequesterId=@id OR AddresseeId=@id`, { id: req.userId });
+    await q(`DELETE FROM dbo.Homework WHERE UserId=@id`, { id: req.userId });   // kişiye özel ödev (Homework.UserId'de CASCADE yok)
     await q(`DELETE FROM dbo.Users WHERE Id=@id`, { id: req.userId });
   });
   res.clearCookie(config.cookieName, { path: '/', secure: config.cookieSecure, sameSite: config.cookieSameSite });

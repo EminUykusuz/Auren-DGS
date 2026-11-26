@@ -217,14 +217,20 @@ r.post('/students', ...requireStaff, validate(rowSchema.omit({ line: true }).ext
 // ---------- Öğrenci listesi / düzenleme / şifre ----------
 r.get('/students', ...requireStaff, validate(z.object({ classId: z.coerce.number().int().positive().optional(), unassigned: z.enum(['1']).optional(), q: z.string().trim().max(60).optional() }), 'query'), wrap(async (req, res) => {
   const { classId, unassigned, q } = req.query;
-  const rows = await query(`SELECT TOP 2000 u.Id, u.Username, u.FullName, u.StudentNo, u.ClassId, c.Name AS ClassName, u.IsDisabled, u.MustChangePassword, u.LastLoginAt
+  const rows = await query(`SELECT TOP 2000 u.Id, u.Username, u.FullName, u.StudentNo, u.ClassId, c.Name AS ClassName, u.IsDisabled, u.MustChangePassword, u.LastLoginAt,
+      (SELECT AVG(CAST(t.TotalNet AS float)) FROM (SELECT TOP 3 TotalNet FROM dbo.TrialExams WHERE UserId=u.Id ORDER BY ExamDate DESC, Id DESC) t) AS Avg3,
+      (SELECT COUNT(*) FROM dbo.Homework h WHERE h.InstitutionId=u.InstitutionId AND ((h.ClassId IS NOT NULL AND h.ClassId=u.ClassId) OR h.UserId=u.Id)
+         AND NOT EXISTS (SELECT 1 FROM dbo.HomeworkSubmissions s WHERE s.HomeworkId=h.Id AND s.UserId=u.Id)) AS OpenHw,
+      (SELECT COUNT(*) FROM dbo.Homework h LEFT JOIN dbo.HomeworkDue du ON du.HomeworkId=h.Id AND du.UserId=u.Id WHERE h.InstitutionId=u.InstitutionId AND ((h.ClassId IS NOT NULL AND h.ClassId=u.ClassId) OR h.UserId=u.Id)
+         AND COALESCE(du.DueDate, h.DueDate) < CAST(@today AS date) AND NOT EXISTS (SELECT 1 FROM dbo.HomeworkSubmissions s WHERE s.HomeworkId=h.Id AND s.UserId=u.Id)) AS LateHw
     FROM dbo.Users u LEFT JOIN dbo.Classes c ON c.Id=u.ClassId
     WHERE u.Role='student' AND ${scopeSql(req)} ${classId ? 'AND u.ClassId=@cls' : ''} ${unassigned && req.role === 'owner' ? 'AND u.ClassId IS NULL' : ''}
       ${q ? `AND (u.FullName LIKE @like ESCAPE '\\' OR u.Username LIKE @like ESCAPE '\\' OR u.StudentNo LIKE @like ESCAPE '\\')` : ''}
     ORDER BY c.Name, u.FullName`,
-    { ...scopeParams(req), ...(classId ? { cls: classId } : {}), ...(q ? { like: '%' + q.replace(/[%_\\[]/g, '\\$&') + '%' } : {}) });
+    { ...scopeParams(req), today: new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10), ...(classId ? { cls: classId } : {}), ...(q ? { like: '%' + q.replace(/[%_\\[]/g, '\\$&') + '%' } : {}) });
   res.json({ students: rows.map(s => ({ id: s.Id, username: s.Username, fullName: s.FullName ?? '', studentNo: s.StudentNo, classId: s.ClassId, className: s.ClassName,
-    isDisabled: !!s.IsDisabled, mustChangePassword: !!s.MustChangePassword, lastLoginAt: s.LastLoginAt })) });
+    isDisabled: !!s.IsDisabled, mustChangePassword: !!s.MustChangePassword, lastLoginAt: s.LastLoginAt,
+    avgNet: s.Avg3 == null ? null : Math.round(s.Avg3 * 100) / 100, openHomework: s.OpenHw, lateHomework: s.LateHw })) });
 }));
 
 r.patch('/students/:id', ...requireStaff, validate(idParam, 'params'), validate(z.object({

@@ -79,6 +79,7 @@ r.delete('/users/:id', validate(idParam, 'params'), wrap(async (req, res) => {
   if (t.IsAdmin) return res.status(400).json({ error: 'Önce yönetici yetkisini kaldır' });
   await tx(async q => {
     await q(`DELETE FROM dbo.Friendships WHERE RequesterId=@id OR AddresseeId=@id`, { id });
+    await q(`DELETE FROM dbo.Homework WHERE UserId=@id`, { id });   // kişiye özel ödev (Homework.UserId'de CASCADE yok)
     await q(`DELETE FROM dbo.Users WHERE Id=@id`, { id }); // diğer tablolar ON DELETE CASCADE
   });
   res.json({ ok: true });

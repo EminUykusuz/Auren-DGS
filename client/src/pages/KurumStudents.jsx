@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { Pencil, Check, X, UserPlus, FileSpreadsheet, Search, KeyRound, ArrowRightLeft, Download, Upload, Loader2, Ban, CircleCheck, TriangleAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Pencil, Check, X, UserPlus, FileSpreadsheet, Search, KeyRound, ArrowRightLeft, Download, Upload, Loader2, Ban, CircleCheck, TriangleAlert, ClipboardList } from 'lucide-react';
 import clsx from 'clsx';
 import { api, get, post } from '../lib/api.js';
 import { useAuth } from '../store.js';
@@ -96,7 +97,7 @@ function AddBulk({ classes, onDone }) {
 
 // ---- Liste ----
 export default function Students() {
-  const { user } = useAuth(); const owner = user.role === 'owner';
+  const { user } = useAuth(); const owner = user.role === 'owner'; const nav = useNavigate();
   const cls = useLoad('/kurum/classes');
   const [filter, setFilter] = useState('');   // '' | 'u' (sınıfsız) | sınıf id
   const [q, setQ] = useState('');
@@ -126,6 +127,11 @@ export default function Students() {
   });
   const [edit, setEdit] = useState(null);   // { id, fullName, studentNo }
   const saveEdit = () => run(async () => { await api('PATCH', '/kurum/students/' + edit.id, { fullName: edit.fullName.trim(), studentNo: edit.studentNo.trim() || null }); setEdit(null); list.reload(); });
+  // Satırdaki sınıf seçicisi: seçince hemen taşır (geçmişe yazılır)
+  const changeClass = (s, v) => run(async () => {
+    await post('/kurum/students/transfer', { moves: [{ studentId: s.id, toClassId: v === '' ? null : Number(v) }], reason: 'Öğrenci listesinden değiştirildi' });
+    setOk((s.fullName || s.username) + ' yeni sınıfına taşındı.'); list.reload(); cls.reload();
+  });
   const setDisabled = (s) => run(async () => { await api('PATCH', `/kurum/students/${s.id}`, { isDisabled: !s.isDisabled }); list.reload(); });
 
   return (<>
@@ -155,6 +161,7 @@ export default function Students() {
             <select id="m-to" value={target} onChange={e => setTarget(e.target.value)}><option value="">Seçin…</option>{owner && <option value="none">Sınıfsız</option>}{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
           <div className="min-w-[160px] flex-1"><label htmlFor="m-why">Not (isteğe bağlı)</label><input id="m-why" value={reason} onChange={e => setReason(e.target.value)} maxLength={200} placeholder="ör. Kasım sınıf değiştirme sınavı" /></div>
           <button className="btn" disabled={busy || !target} onClick={move}><ArrowRightLeft size={15} />Taşı</button>
+          <button className="btn-ghost" disabled={busy} onClick={() => nav('/kurum/odev', { state: { studentIds: [...sel] } })}><ClipboardList size={15} />Ödev ver</button>
           <button className="btn-ghost" disabled={busy} onClick={resetPw}><KeyRound size={15} />Şifre sıfırla ve çıktı al</button>
         </div>)}
       <Err>{err}</Err>{ok && <p role="status" className="rounded-2xl bg-accent/10 px-3.5 py-2.5 text-xs text-emerald-300">{ok}</p>}
@@ -165,7 +172,7 @@ export default function Students() {
         <div className="overflow-x-auto"><table className="w-full text-left text-sm">
           <thead><tr className="stat-label">
             <th className="w-10 px-3 py-2"><input type="checkbox" className="!h-4 !w-4" checked={allSel} onChange={() => setSel(allSel ? new Set() : new Set(students.map(s => s.id)))} aria-label="Hepsini seç" /></th>
-            <th className="px-3 py-2">Ad Soyad</th><th className="px-3 py-2">Kullanıcı adı</th><th className="px-3 py-2">No</th><th className="px-3 py-2">Sınıf</th><th className="px-3 py-2">Son giriş</th><th className="px-3 py-2">Durum</th></tr></thead>
+            <th className="px-3 py-2">Ad Soyad</th><th className="px-3 py-2">Kullanıcı adı</th><th className="px-3 py-2">No</th><th className="px-3 py-2">Sınıf</th><th className="px-3 py-2">Ort. net</th><th className="px-3 py-2">Ödev</th><th className="px-3 py-2">Son giriş</th><th className="px-3 py-2">Durum</th></tr></thead>
           <tbody>{students.map(s => (
             <tr key={s.id} className={clsx('border-t border-white/[0.05]', s.isDisabled && 'opacity-50')}>
               <td className="px-3 py-2"><input type="checkbox" className="!h-4 !w-4" checked={sel.has(s.id)} onChange={() => toggle(s.id)} aria-label={`${s.fullName} seç`} /></td>
@@ -175,7 +182,10 @@ export default function Students() {
               <td className="px-3 py-2 font-mono text-xs">{s.username}</td>
               <td className="px-3 py-2">{edit?.id === s.id
                 ? <span className="flex items-center gap-1"><input aria-label="Öğrenci no" className="!w-24" value={edit.studentNo} onChange={e => setEdit({ ...edit, studentNo: e.target.value })} maxLength={20} /><button className="btn !px-2 !py-1" disabled={busy || edit.fullName.trim().length < 3} onClick={saveEdit} aria-label="Kaydet"><Check size={13} /></button><button className="btn-ghost !px-2 !py-1" onClick={() => setEdit(null)} aria-label="Vazgeç"><X size={13} /></button></span>
-                : (s.studentNo ?? '—')}</td><td className="px-3 py-2">{s.className ?? <span className="text-slate-500">Sınıfsız</span>}</td>
+                : (s.studentNo ?? '—')}</td><td className="px-3 py-2"><select aria-label={(s.fullName || s.username) + ' sınıfı'} value={s.classId ?? ''} disabled={busy || s.isDisabled} onChange={e => changeClass(s, e.target.value)} className="!w-32 !py-1.5">
+                {(owner || s.classId == null) && <option value="">Sınıfsız</option>}{s.classId != null && !classes.some(c => c.id === s.classId) && <option value={s.classId}>{s.className}</option>}{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></td>
+              <td className="px-3 py-2 num">{s.avgNet ?? <span className="text-slate-600">—</span>}</td>
+              <td className="px-3 py-2">{s.lateHomework > 0 ? <span className="badge bg-red-500/15 text-red-300">{s.lateHomework} gecikmiş</span> : s.openHomework > 0 ? <span className="badge bg-amber-400/15 text-amber-300">{s.openHomework} açık</span> : <span className="text-slate-600">—</span>}</td>
               <td className="px-3 py-2">{s.mustChangePassword ? <span className="badge bg-amber-400/15 text-amber-300">giriş bekliyor</span> : when(s.lastLoginAt)}</td>
               <td className="px-3 py-2"><button className="btn-ghost !px-2.5 !py-1 text-xs" disabled={busy} onClick={() => setDisabled(s)} aria-label={s.isDisabled ? 'Hesabı etkinleştir' : 'Hesabı pasife al'}>
                 {s.isDisabled ? <><Ban size={12} />Pasif</> : <><CircleCheck size={12} className="text-accent" />Aktif</>}</button></td>

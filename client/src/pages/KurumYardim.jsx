@@ -24,6 +24,24 @@ export default function KurumYardim() {
       ]} />
     </Block>
 
+    <Block icon={ClipboardList} title="Kişiye özel ödev ve Excel ile toplu ödev" intro="Her öğrenciye farklı konu verebilirsin; Excel listesini sisteme okutursun, ödevler öğrencilerin paneline tek tek düşer.">
+      <Steps items={[
+        ['Şablonu indir', 'Ödev sekmesinde "Kişiye özel ödev" düğmesine bas, "Şablonu indir" de. Excel\'de kapsamındaki öğrencilerin numarası ve adı hazır gelir.'],
+        ['Konuları yaz', 'Her satır bir öğrencinin bir konusudur: Konu, Hedef soru, Teslim tarihi. Aynı öğrenciye birden fazla konu vermek için satırı kopyala. Konusu boş satır ödev almaz.'],
+        ['Yükle ve kontrol et', '"Excel / CSV yükle" ile dosyayı seç (ya da Excel\'den kopyalayıp yapıştır). Sistem öğrencileri numaraya, numara yoksa ada göre eşler; eşleşmeyen satırları nedeniyle birlikte gösterir. Tarihleri burada öğrenci başına düzeltebilirsin.'],
+        ['Gönder', '"Öğrenciye gönder" dediğinde her öğrenci yalnızca kendi ödevini görür. Öğrenci listesinden öğrenci seçip "Ödev ver" ile de aynı ekrana geçebilirsin.'],
+      ]} />
+      <Note>Öğrenci sınıf değiştirse bile kişisel ödevi kendisinde kalır; öğretmen ise ödevi öğrencinin şu anki sınıfına göre görür.</Note>
+    </Block>
+
+    <Block icon={ClipboardList} title="Ödevi bitirme onayı ve teslim tarihi görüşmesi" intro="Öğrenci ödevi bitirdiğini onaylar; teslim gününü seninle konuşarak değiştirebilir.">
+      <Steps items={[
+        ['Bitirdi onayı', 'Öğrenci "Ödevi bitirdim" deyince tüm maddeler tamamlandı sayılır. Ödev listesinde "Bitirdi" etiketi ve tamamlama oranı görünür.'],
+        ['Tarih talebi', 'Öğrenci yeni bir teslim tarihi isterse Ödev sekmesinde ve ödevin yanında turuncu "tarih talebi" rozeti çıkar. Satırdaki mesaj simgesine bas.'],
+        ['Yanıtla', '"Kabul et" ya da "Reddet" de; ya da kendin yeni bir tarih belirle ve mesaj yaz. Tarih yalnızca o öğrenci için değişir, sınıfın geri kalanı etkilenmez.'],
+      ]} />
+    </Block>
+
     <Block icon={Users} title="Öğrencileri yönet" intro="Öğrenciler sekmesinden her şeyi tek yerden yaparsın.">
       <Steps items={[
         ['Ad veya numara düzelt', 'Öğrencinin satırındaki kalem simgesiyle adını ve öğrenci numarasını değiştir. Aynı numara kurumda iki kez kullanılamaz; aynı isimli öğrencileri numara ve sınıf ayırır.'],

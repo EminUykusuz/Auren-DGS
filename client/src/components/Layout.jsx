@@ -50,7 +50,7 @@ const Tip = ({ children, show }) => show ? (
 function Item({ to, label, Icon, collapsed, badge }) {
   return (
     <div className="group relative">
-      <NavLink to={to} end={to === '/' || to === '/admin'} aria-label={collapsed ? (badge > 0 ? `${label}, ${badge} bekleyen istek` : label) : undefined} className={({ isActive }) => itemCls(isActive, collapsed)}>
+      <NavLink to={to} end={to === '/' || to === '/admin'} aria-label={collapsed ? (badge > 0 ? `${label}, ${badge} bekleyen` : label) : undefined} className={({ isActive }) => itemCls(isActive, collapsed)}>
         <span className="relative"><Icon size={19} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
           {badge > 0 && <span aria-hidden="true" className="num absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-onaccent">{badge}</span>}</span>
         {!collapsed && label}
@@ -67,12 +67,14 @@ export function Shell() {
   const [pending, setPending] = useState(0);
   const staff = isStaff(user);
   useBrandColor(user?.institution?.color);   // kurum rengi vurgu rengini geçersiz kılar
+  const [hwOpen, setHwOpen] = useState(0);   // kurum öğrencisinin teslim edilmemiş ödev sayısı
   usePoll(() => { if (!staff) get('/friends').then(r => setPending(r.incoming.length)).catch(() => {}); }, 30000);
+  usePoll(() => { if (!staff && user?.institution) get('/odev/my/summary').then(r => setHwOpen(r.open)).catch(() => {}); }, 60000);
   const seg = loc.pathname.split('/')[1] ?? '';
   useEffect(() => { document.title = `${titles[seg] ?? 'Auren Study'} · Auren Study`; }, [seg, mode]);
   useEffect(() => { document.documentElement.dataset.exam = mode; }, [mode]);   // moda göre vurgu rengi (index.css)
   if (!user) return null;   // çıkış anında bu bileşen, App kaldırmadan önce bir kez daha çizilebilir
-  const base = staff ? [{ to: '/kurum', l: 'Kurum paneli', I: Building2, badge: 0 }] : [...nav, ...(user.institution ? [['/odev', 'Ödevler', ClipboardList]] : []), ['/yardim', 'Nasıl kullanılır', CircleHelp]].map(([to, l, I]) => ({ to, l, I, badge: to === '/arkadaslar' ? pending : 0 }));
+  const base = staff ? [{ to: '/kurum', l: 'Kurum paneli', I: Building2, badge: 0 }] : [...nav, ...(user.institution ? [['/odev', 'Ödevler', ClipboardList]] : []), ['/yardim', 'Nasıl kullanılır', CircleHelp]].map(([to, l, I]) => ({ to, l, I, badge: to === '/arkadaslar' ? pending : to === '/odev' ? hwOpen : 0 }));
   const items = [...base, ...(user.isAdmin ? [{ to: '/admin', l: 'Yönetim', I: ShieldCheck }] : [])];
   const inst = user.institution, logo = logoUrl(inst);
   const light = theme === 'light';
