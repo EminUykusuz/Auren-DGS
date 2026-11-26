@@ -12,8 +12,8 @@ r.get('/search', validate(z.object({ q: z.string().trim().min(2).max(30).regex(/
     `SELECT TOP 10 u.Id, u.Username, u.AvatarUrl,
        (SELECT TOP 1 f.Status FROM dbo.Friendships f WHERE f.PairLow = CASE WHEN u.Id<@me THEN u.Id ELSE @me END
           AND f.PairHigh = CASE WHEN u.Id<@me THEN @me ELSE u.Id END) AS Relation
-     FROM dbo.Users u WHERE u.Id<>@me AND u.Username LIKE @like ESCAPE '\\' ORDER BY u.Username`,
-    { me: req.userId, like: req.query.q.replace(/[%_\\[]/g, '\\$&') + '%' });
+     FROM dbo.Users u WHERE u.Id<>@me AND ISNULL(u.InstitutionId,0)=@inst AND u.Username LIKE @like ESCAPE '\\' ORDER BY u.Username`,
+    { me: req.userId, inst: req.institutionId ?? 0, like: req.query.q.replace(/[%_\\[]/g, '\\$&') + '%' });
   res.json({ users: rows.map(x => ({ id: x.Id, username: x.Username, avatarUrl: x.AvatarUrl, relation: x.Relation ?? null })) });
 }));
 
@@ -32,7 +32,8 @@ r.get('/', wrap(async (req, res) => {
 }));
 
 r.post('/request', validate(z.object({ username: z.string().trim().regex(/^[\p{L}\p{N}_.-]{3,30}$/u) })), wrap(async (req, res) => {
-  const [t] = await query(`SELECT Id FROM dbo.Users WHERE Username=@u`, { u: req.body.username });
+  // Kurum öğrencileri yalnızca kendi kurumlarındakilerle arkadaş olabilir; bireysel kullanıcılar kurum öğrencilerini bulamaz
+  const [t] = await query(`SELECT Id FROM dbo.Users WHERE Username=@u AND ISNULL(InstitutionId,0)=@inst`, { u: req.body.username, inst: req.institutionId ?? 0 });
   if (!t || t.Id === req.userId) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
   const [ex] = await query(`SELECT Id, Status, RequesterId FROM dbo.Friendships WHERE PairLow=@lo AND PairHigh=@hi`,
     { lo: Math.min(req.userId, t.Id), hi: Math.max(req.userId, t.Id) });

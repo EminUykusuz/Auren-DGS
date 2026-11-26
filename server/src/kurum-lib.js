@@ -102,9 +102,9 @@ export const STAFF = new Set(['owner', 'teacher']);
 export const isStaff = (role) => STAFF.has(role);
 // Öğretmen yalnızca atandığı sınıflara erişir; owner kurumdaki tüm sınıflara
 export const canAccessClass = (role, assignedIds, classId) => role === 'owner' || (role === 'teacher' && assignedIds.includes(classId));
-// Taşıma: iki sınıfa da erişim gerekir (hedef null = sınıfsız)
+// Taşıma: öğretmen için kaynak ve hedef sınıfın ikisi de atandığı sınıflardan olmalı (sahipsiz öğrenciyi yalnızca yönetici yerleştirir)
 export const canTransfer = (role, assignedIds, fromId, toId) =>
-  role === 'owner' || (role === 'teacher' && [fromId, toId].filter(x => x != null).every(x => assignedIds.includes(x)) && (fromId != null || toId != null));
+  role === 'owner' || (role === 'teacher' && fromId != null && toId != null && assignedIds.includes(fromId) && assignedIds.includes(toId));
 
 // Sınıf değiştirme sınavı önerisi: net'e göre sıralı öğrencileri kotalara böler.
 // students: [{ id, score }], tiers: [{ classId, size }] (son kademe size=null → kalanlar). Eşit puanda id sırası (kararlı).

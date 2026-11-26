@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { query, tx } from '../db.js';
-import { authLimiter, setAuthCookie, requireAuth, validate, wrap } from '../security.js';
+import { authLimiter, loginLimiter, userLimiter, setAuthCookie, requireAuth, validate, wrap } from '../security.js';
 
 const r = Router();
 const username = z.string().trim().regex(/^[\p{L}\p{N}_.-]{3,30}$/u, 'Kullanıcı adı: 3-30 karakter; harf, rakam, _ . - kullanılabilir (boşluk olmaz)');
@@ -14,7 +14,15 @@ const password = z.string().min(8, 'En az 8 karakter').max(72, 'En fazla 72 kara
 
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 const DUMMY_HASH = bcrypt.hashSync('dummy-password-1', config.bcryptRounds); // zamanlama eşitleme
-const pub = u => ({ id: u.Id, username: u.Username, email: u.Email, isAdmin: !!u.IsAdmin, examMode: u.ExamMode ?? 'DGS', examTrack: u.ExamTrack ?? 'BOTH', fullName: u.FullName ?? '', avatarUrl: u.AvatarUrl ?? null });
+// Kurum öğrencisinin yer tutucu e-postası arayüzde gösterilmez
+const isPlaceholderEmail = e => typeof e === 'string' && e.endsWith('@ogrenci.invalid');
+const pub = u => ({ id: u.Id, username: u.Username, email: isPlaceholderEmail(u.Email) ? null : u.Email, isAdmin: !!u.IsAdmin, examMode: u.ExamMode ?? 'DGS', examTrack: u.ExamTrack ?? 'BOTH', fullName: u.FullName ?? '', avatarUrl: u.AvatarUrl ?? null,
+  role: u.Role ?? 'student', mustChangePassword: !!u.MustChangePassword, classId: u.ClassId ?? null,
+  institution: u.InstitutionId ? { id: u.InstitutionId, name: u.InstName, slug: u.InstSlug, color: u.InstColor ?? null, logoVersion: u.InstLogoVersion ?? 0, hasLogo: (u.InstLogoVersion ?? 0) > 0 } : null });
+// pub() için gereken sütunlar (kurum markası dahil)
+const USER_COLS = `u.Id, u.Username, u.Email, u.IsAdmin, u.ExamMode, u.ExamTrack, u.FullName, u.AvatarUrl, u.Role, u.InstitutionId, u.ClassId, u.MustChangePassword,
+  i.Name AS InstName, i.Slug AS InstSlug, i.PrimaryColor AS InstColor, i.LogoVersion AS InstLogoVersion`;
+const USER_FROM = `dbo.Users u LEFT JOIN dbo.Institutions i ON i.Id = u.InstitutionId`;
 
 r.post('/register', authLimiter, validate(z.object({ username, email, password, examTrack: z.enum(['DGS', 'YKS', 'BOTH']).default('BOTH'), examMode: z.enum(['DGS', 'YKS']).optional() })), wrap(async (req, res) => {
   const { username: u, email: e, password: p, examTrack: t } = req.body;
@@ -30,11 +38,11 @@ r.post('/register', authLimiter, validate(z.object({ username, email, password, 
   }
 }));
 
-r.post('/login', authLimiter, validate(z.object({ identifier: z.string().trim().min(1).max(254), password: z.string().min(1).max(72) })), wrap(async (req, res) => {
+r.post('/login', ...loginLimiter, validate(z.object({ identifier: z.string().trim().min(1).max(254), password: z.string().min(1).max(72) })), wrap(async (req, res) => {
   const { identifier, password: p } = req.body;
-  const [u] = await query(`SELECT Id, Username, Email, PasswordHash, IsAdmin, IsDisabled, ExamMode, ExamTrack, FullName, AvatarUrl FROM dbo.Users WHERE Email=@i OR Username=@i`, { i: identifier });
+  const [u] = await query(`SELECT ${USER_COLS}, u.PasswordHash, u.IsDisabled, i.IsActive AS InstActive FROM ${USER_FROM} WHERE u.Email=@i OR u.Username=@i`, { i: identifier });
   const ok = await bcrypt.compare(p, u?.PasswordHash ?? DUMMY_HASH);
-  if (!u || !ok || u.IsDisabled) return res.status(401).json({ error: 'Kullanıcı adı/e-posta veya şifre hatalı' });
+  if (!u || !ok || u.IsDisabled || (u.InstitutionId != null && !u.InstActive)) return res.status(401).json({ error: 'Kullanıcı adı/e-posta veya şifre hatalı' });
   await query(`UPDATE dbo.Users SET LastLoginAt=SYSUTCDATETIME() WHERE Id=@id`, { id: u.Id });
   setAuthCookie(res, u.Id);
   res.json({ user: pub(u) });
@@ -43,9 +51,19 @@ r.post('/login', authLimiter, validate(z.object({ identifier: z.string().trim().
 r.post('/logout', (req, res) => { res.clearCookie(config.cookieName, { path: '/', secure: config.cookieSecure, sameSite: config.cookieSameSite }); res.json({ ok: true }); });
 
 r.get('/me', requireAuth, wrap(async (req, res) => {
-  const [u] = await query(`SELECT Id, Username, Email, IsAdmin, ExamMode, ExamTrack, FullName, AvatarUrl FROM dbo.Users WHERE Id=@id`, { id: req.userId });
+  const [u] = await query(`SELECT ${USER_COLS} FROM ${USER_FROM} WHERE u.Id=@id`, { id: req.userId });
   if (!u) return res.status(401).json({ error: 'Oturum geçersiz' });
   res.json({ user: pub(u) });
+}));
+
+// Şifre değiştirme (kurum öğrencisinin ilk girişteki zorunlu değişimi dahil)
+r.post('/change-password', requireAuth, userLimiter, validate(z.object({ currentPassword: z.string().min(1).max(72), newPassword: password }).strict()), wrap(async (req, res) => {
+  const [u] = await query(`SELECT PasswordHash FROM dbo.Users WHERE Id=@id`, { id: req.userId });
+  if (!u || !(await bcrypt.compare(req.body.currentPassword, u.PasswordHash))) return res.status(403).json({ error: 'Mevcut şifre yanlış' });
+  if (req.body.currentPassword === req.body.newPassword) return res.status(400).json({ error: 'Yeni şifre eskisinden farklı olmalı' });
+  const h = await bcrypt.hash(req.body.newPassword, config.bcryptRounds);
+  await query(`UPDATE dbo.Users SET PasswordHash=@h, MustChangePassword=0 WHERE Id=@id`, { h, id: req.userId });
+  res.json({ ok: true });
 }));
 
 // Kullanıcı numaralandırmayı önlemek için her zaman aynı yanıt.

@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
+import bcrypt from 'bcryptjs';
 import { requireAdmin, validate, wrap } from '../security.js';
+import { makeSlug, SLUG_RE, makeUsername, genPassword, asciiFold } from '../kurum-lib.js';
 
 const r = Router();
 r.use(requireAdmin); // oturum + IsAdmin (yetkisizlere 404)
@@ -99,6 +101,62 @@ r.get('/activity', wrap(async (req, res) => {
       UNION ALL SELECT 'friend', u.Username, 'arkadaşlık ' + f.Status, f.CreatedAt FROM dbo.Friendships f JOIN dbo.Users u ON u.Id=f.RequesterId
     ) a ORDER BY At DESC`);
   res.json({ events: rows.map(x => ({ kind: x.Kind, username: x.Username, detail: x.Detail, at: x.At })) });
+}));
+
+// ---------- Kurumlar (dershane satışı): oluştur, listele, pasife al / kota ----------
+r.get('/institutions', wrap(async (req, res) => {
+  const rows = await query(`SELECT i.Id, i.Name, i.Slug, i.ExamTrack, i.StudentLimit, i.IsActive, i.CreatedAt,
+      (SELECT COUNT(*) FROM dbo.Users u WHERE u.InstitutionId=i.Id AND u.Role='student') AS Students,
+      (SELECT COUNT(*) FROM dbo.Users u WHERE u.InstitutionId=i.Id AND u.Role='teacher') AS Teachers,
+      (SELECT COUNT(*) FROM dbo.Classes c WHERE c.InstitutionId=i.Id) AS Classes
+    FROM dbo.Institutions i ORDER BY i.CreatedAt DESC`);
+  res.json({ institutions: rows.map(i => ({ id: i.Id, name: i.Name, slug: i.Slug, examTrack: i.ExamTrack, studentLimit: i.StudentLimit, isActive: !!i.IsActive, createdAt: i.CreatedAt, students: i.Students, teachers: i.Teachers, classes: i.Classes })) });
+}));
+
+r.post('/institutions', validate(z.object({
+  name: z.string().trim().min(2).max(100), slug: z.string().trim().toLowerCase().regex(SLUG_RE, 'Adres 3-40 küçük harf/rakam olmalı').optional(),
+  examTrack: z.enum(['DGS', 'YKS', 'BOTH']).default('BOTH'), studentLimit: z.number().int().min(1).max(100000).nullish(),
+  ownerFirstName: z.string().trim().min(1).max(40), ownerLastName: z.string().trim().min(1).max(40),
+}).strict()), wrap(async (req, res) => {
+  const d = req.body, slug = d.slug ?? makeSlug(d.name);
+  if (!SLUG_RE.test(slug)) return res.status(400).json({ error: 'Kurum adresi üretilemedi, elle girin (3-40 küçük harf/rakam)' });
+  const taken = new Set((await query(`SELECT Username FROM dbo.Users WHERE Username LIKE @p`, { p: slug.slice(0, 8) + '.%' })).map(x => x.Username.toLowerCase()));
+  const username = makeUsername(slug.slice(0, 8), d.ownerFirstName + d.ownerLastName, taken);
+  const pw = genPassword(10), h = await bcrypt.hash(pw, 10);
+  try {
+    const out = await tx(async q => {
+      const [i] = await q(`INSERT INTO dbo.Institutions (Name, Slug, ExamTrack, StudentLimit) OUTPUT INSERTED.Id VALUES (@n,@s,@t,@l)`, { n: d.name, s: slug, t: d.examTrack, l: d.studentLimit ?? null });
+      const [u] = await q(`INSERT INTO dbo.Users (Username, Email, PasswordHash, FullName, InstitutionId, Role, MustChangePassword, ExamMode, ExamTrack)
+        OUTPUT INSERTED.Id VALUES (@u,@e,@h,@f,@i,'owner',1,'DGS',@t)`,
+        { u: username, e: `${username}@ogrenci.invalid`, h, f: `${d.ownerFirstName} ${d.ownerLastName}`.slice(0, 80), i: i.Id, t: d.examTrack });
+      return { id: i.Id, ownerId: u.Id };
+    });
+    res.status(201).json({ ...out, slug, loginPath: `/k/${slug}`, owner: { username, password: pw } });   // şifre yalnızca bir kez gösterilir
+  } catch (e) {
+    if (e?.number === 2627 || e?.number === 2601) return res.status(409).json({ error: 'Bu kurum adresi zaten kullanılıyor' });
+    throw e;
+  }
+}));
+
+r.patch('/institutions/:id', validate(idParam, 'params'), validate(z.object({
+  name: z.string().trim().min(2).max(100).optional(), isActive: z.boolean().optional(), studentLimit: z.number().int().min(1).max(100000).nullable().optional(),
+  examTrack: z.enum(['DGS', 'YKS', 'BOTH']).optional(),
+}).strict()), wrap(async (req, res) => {
+  const d = req.body;
+  const out = await query(`UPDATE dbo.Institutions SET Name=COALESCE(@n,Name), IsActive=COALESCE(@a,IsActive), ExamTrack=COALESCE(@t,ExamTrack),
+      StudentLimit=CASE WHEN @setL=1 THEN @l ELSE StudentLimit END OUTPUT INSERTED.Id WHERE Id=@id`,
+    { n: d.name ?? null, a: d.isActive == null ? null : (d.isActive ? 1 : 0), t: d.examTrack ?? null, setL: 'studentLimit' in d ? 1 : 0, l: d.studentLimit ?? null, id: req.params.id });
+  if (!out.length) return res.status(404).json({ error: 'Bulunamadı' });
+  res.json({ ok: true });
+}));
+
+// Kurum yöneticisinin şifresini sıfırla (kurum şifresini unutursa)
+r.post('/institutions/:id/reset-owner', validate(idParam, 'params'), wrap(async (req, res) => {
+  const [o] = await query(`SELECT TOP 1 Id, Username FROM dbo.Users WHERE InstitutionId=@id AND Role='owner' ORDER BY Id`, { id: req.params.id });
+  if (!o) return res.status(404).json({ error: 'Bulunamadı' });
+  const pw = genPassword(10);
+  await query(`UPDATE dbo.Users SET PasswordHash=@h, MustChangePassword=1 WHERE Id=@id`, { h: await bcrypt.hash(pw, 10), id: o.Id });
+  res.json({ username: o.Username, password: pw });
 }));
 
 export default r;

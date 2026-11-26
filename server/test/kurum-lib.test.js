@@ -68,6 +68,8 @@ test('yetki: öğretmen yalnız atandığı sınıflara erişir', () => {
   assert.equal(canTransfer('teacher', [1, 2], 1, 2), true);
   assert.equal(canTransfer('teacher', [1], 1, 2), false);
   assert.equal(canTransfer('teacher', [1], null, null), false);
+  assert.equal(canTransfer('teacher', [1], null, 1), false);   // sahipsiz öğrenciyi öğretmen kapamaz
+  assert.equal(canTransfer('teacher', [1], 1, null), false);
   assert.equal(canTransfer('owner', [], 5, 6), true);
 });
 

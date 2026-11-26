@@ -15,6 +15,7 @@ import study from './routes/study.js';
 import social from './routes/social.js';
 import admin from './routes/admin.js';
 import profile from './routes/profile.js';
+import kurum from './routes/kurum.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -26,6 +27,8 @@ app.use(cors({
   origin: (o, cb) => (!o || config.origins.includes(o)) ? cb(null, true) : cb(new Error('CORS')),
   credentials: true,
 }));
+// Kurum içe aktarma (yüzlerce öğrenci) için daha büyük gövde; yalnızca bu yolda. Genel ayrıştırıcı zaten ayrışmış gövdeyi atlar.
+app.use('/api/kurum', express.json({ limit: '256kb' }));
 app.use(express.json({ limit: '20kb' }));
 app.use(cookieParser());
 // İndekslenecek herkese açık sayfalar (client/public/sitemap.xml ile aynı). Diğer her yol (API, panel, giriş, kayıt, bilinmeyen) noindex:
@@ -49,6 +52,7 @@ app.use('/api', study);
 app.use('/api', social);
 app.use('/api', profile);
 app.use('/api/admin', admin);
+app.use('/api/kurum', kurum);
 
 // Derlenmiş istemci (client/dist) varsa aynı portta sun: sıkıştırma + uzun süreli önbellek
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
