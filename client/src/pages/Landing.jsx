@@ -1,247 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import clsx from 'clsx';
-import { AnimatePresence, MotionConfig, animate, motion, useInView, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
-import { ArrowRight, BarChart3, CalendarCheck, Flame, Layers, Moon, Plus, ShieldCheck, Sun, Target, TrendingUp, Users } from 'lucide-react';
-import { useExam } from '../store.js';
-import { useTheme } from '../theme.js';
-import ModeSwitch from '../components/ModeSwitch.jsx';
-import { net, fmt } from '../lib/api.js';
-import { REASONS } from '../lib/reasons.js';
 import JsonLd from '../components/JsonLd.jsx';
-import { SITE, DEFAULT_DESC } from '../hooks/useSEO.js';
 import LegalLinks from '../components/LegalLinks.jsx';
-import { EST, partMax, partNet, approxScore, blendYks } from '../lib/estimate.js';
+import { SITE, DEFAULT_DESC } from '../hooks/useSEO.js';
+import { net, fmt } from '../lib/api.js';
+import { EST, partMax, partNet, approxScore } from '../lib/estimate.js';
+import '../landing-fonts.css';
+import '../landing.css';
 
-/* Landing: uygulamanın panel diliyle aynı — cam kartlar, tema değişkenleri, seçili sınava göre vurgu rengi. */
+/* Landing: "sayfa nesnenin kendisidir". Optik cevap kâğıdı: hero bir davetiye kartı, net hesabı kâğıdın kendisi.
+   Uygulama temasından bağımsızdır (.ln kapsamı). Görseller /landing altında, kendi sunucumuzdan (CSP). */
 
-const SAMPLE = {
-  DGS: { title: 'DGS denemesi', rows: [['Matematik', 38, 6], ['Türkçe', 41, 5]] },
-  YKS: { title: 'TYT denemesi', rows: [['Türkçe', 31, 6], ['Sosyal Bilimler', 15, 3], ['Temel Matematik', 28, 8], ['Fen Bilimleri', 12, 4]] },
-};
-
-// Sayıyı bir önceki değerinden yenisine akıtır; ekrana girince başlar
-function CountUp({ value, className }) {
-  const ref = useRef(null); const prev = useRef(0);
-  const seen = useInView(ref, { once: true, margin: '0px 0px -10% 0px' }); const calm = useReducedMotion();
-  useEffect(() => {
-    if (!seen || !ref.current) return;
-    if (calm) { ref.current.textContent = fmt(value); prev.current = value; return; }
-    const c = animate(prev.current, value, { duration: 0.9, ease: [0.2, 0.7, 0.2, 1], onUpdate: v => { prev.current = v; if (ref.current) ref.current.textContent = fmt(v); } });
-    return () => c.stop();
-  }, [value, seen, calm]);
-  return <span ref={ref} className={className}>{fmt(value)}</span>;
-}
-
-// İmleci izleyen ışık: kart üzerinde hover'da yumuşak vurgu
-const trackPointer = e => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`); };
-const SpotCard = ({ children, className, index = 0 }) => (
-  <motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '0px 0px -8% 0px' }}
-    transition={{ duration: 0.55, delay: index * 0.08, ease: [0.2, 0.7, 0.2, 1] }} whileHover={{ y: -5 }} onPointerMove={trackPointer} className={clsx('card spot', className)}>{children}</motion.div>
-);
-
-// Sayfa üstünde ilerleme çizgisi
-function ScrollBar() {
-  const { scrollYProgress } = useScroll(); const x = useSpring(scrollYProgress, { stiffness: 140, damping: 30, mass: 0.4 });
-  return <motion.div aria-hidden="true" style={{ scaleX: x }} className="fixed inset-x-0 top-0 z-40 h-[3px] origin-left bg-gradient-to-r from-accent to-cyan-400" />;
-}
-
-const Chip = ({ icon: Icon, children, className, delay = 0 }) => (
-  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay, type: 'spring', stiffness: 200, damping: 16 }} className={clsx('absolute z-10 hidden sm:block', className)}>
-    <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 4 + delay * 2, repeat: Infinity, ease: 'easeInOut' }} className="glass-pill flex items-center gap-2 whitespace-nowrap px-3.5 py-2 text-xs font-semibold text-slate-100">
-      <Icon size={14} className="text-accent" />{children}
-    </motion.div>
-  </motion.div>
-);
-
-function SampleCard() {
-  const mode = useExam(s => s.mode); const { title, rows } = SAMPLE[mode];
-  const total = rows.reduce((s, [, c, w]) => s + net(c, w), 0);
-  const top = Math.max(...rows.map(([, c, w]) => net(c, w)));
-  return (
-    <div className="relative">
-      <Chip icon={TrendingUp} className="-right-4 -top-5 lg:-right-6" delay={0.9}>+4,5 net bu hafta</Chip>
-      <Chip icon={Flame} className="-bottom-5 -left-4 lg:-left-6" delay={1.2}>7 günlük seri</Chip>
-      <div className="card spot !p-6" onPointerMove={trackPointer}>
-        <div className="mb-4 flex items-center justify-between"><span className="text-sm font-semibold text-slate-100">{title}</span><span className="badge bg-white/[0.06] text-slate-400">Örnek</span></div>
-        <ul key={mode}>{rows.map(([n, c, w], i) => (
-          <motion.li key={n} initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 + i * 0.12, duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }} className="row py-3 text-sm">
-            <div className="grid grid-cols-[1fr_auto_4.5rem] items-baseline gap-3">
-              <span className="text-slate-300">{n}</span><span className="num text-xs text-slate-500">{c} D · {w} Y</span><b className="num text-right text-base text-slate-50">{fmt(net(c, w))}</b>
-            </div>
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]"><motion.div initial={{ scaleX: 0 }} animate={{ scaleX: net(c, w) / top }} transition={{ delay: 0.7 + i * 0.12, duration: 0.9, ease: [0.2, 0.7, 0.2, 1] }} className="h-full origin-left rounded-full bg-gradient-to-r from-accent to-cyan-400" /></div>
-          </motion.li>))}</ul>
-        <div className="mt-3 flex items-baseline justify-between rounded-2xl bg-accent/15 px-4 py-3.5">
-          <span className="text-sm font-medium text-slate-200">Toplam net</span><CountUp key={mode} value={total} className="num text-3xl font-semibold tracking-tight text-accent" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const Reveal = ({ children, delay = 0, className }) => (
-  <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '0px 0px -8% 0px' }} transition={{ duration: 0.6, delay, ease: [0.2, 0.7, 0.2, 1] }} className={className}>{children}</motion.div>
-);
-
-const Section = ({ id, title, lead, children, className, plain }) => (
-  <section id={id} className={clsx('mx-auto w-full max-w-6xl px-4 py-16 md:py-24', className)}>
-    <Reveal className="mb-10 max-w-2xl">
-      <h2 className="text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl">{title}</h2>
-      {lead && <p className="mt-3 text-base text-slate-400">{lead}</p>}
-    </Reveal>
-    {plain ? children : <Reveal delay={0.08}>{children}</Reveal>}
-  </section>
-);
-
-/* ---------- Net ve puan tahmini ---------- */
-function Estimator() {
-  const mode = useExam(s => s.mode);
-  const [part, setPart] = useState({ DGS: 'DGS', YKS: 'TYT' });
-  const [ans, setAns] = useState({});
-  const partKey = part[mode], def = EST[mode].parts[partKey];
-  const set = (name, max, key, raw) => {
-    const v = Math.max(0, Math.min(max, parseInt(raw, 10) || 0));
-    setAns(p => {
-      const cur = { c: 0, w: 0, ...(p[`${partKey}.${name}`]) }; cur[key] = v;
-      if (cur.c + cur.w > max) { if (key === 'c') cur.w = max - cur.c; else cur.c = max - cur.w; }
-      return { ...p, [`${partKey}.${name}`]: cur };
-    });
-  };
-  const answersOf = (k) => Object.fromEntries(Object.entries(ans).filter(([x]) => x.startsWith(k + '.')).map(([x, v]) => [x.slice(k.length + 1), v]));
-  const calc = (k, sections) => { const n = partNet(sections, answersOf(k)), m = partMax(sections); return { n, m, score: approxScore(n, m) }; };
-  const cur = useMemo(() => calc(partKey, def.sections), [ans, partKey, mode]);
-  const tyt = calc('TYT', EST.YKS.parts.TYT.sections), ayt = calc('AYT', EST.YKS.parts.AYT.sections);
-  const blend = mode === 'YKS' && tyt.n > 0 && ayt.n > 0 ? blendYks(tyt.score, ayt.score) : null;
-  const reset = () => setAns(p => Object.fromEntries(Object.entries(p).filter(([x]) => !x.startsWith(partKey + '.'))));
-
-  return (
-    <div className="card !p-0 overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] p-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <ModeSwitch local compact />
-          {mode === 'YKS' && (
-            <div role="tablist" aria-label="Bölüm" className="flex gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
-              {Object.entries(EST.YKS.parts).map(([id, p]) => (
-                <button key={id} role="tab" aria-selected={partKey === id} onClick={() => setPart(s => ({ ...s, YKS: id }))}
-                  className={clsx('rounded-full px-4 py-1.5 text-xs font-bold transition', partKey === id ? 'bg-white/10 text-slate-50' : 'text-slate-400 hover:text-slate-200')}>{p.label}</button>))}
-            </div>)}
-        </div>
-        <button type="button" onClick={reset} className="text-xs text-slate-400 underline-offset-4 transition hover:text-slate-100 hover:underline">Sıfırla</button>
-      </div>
-      <div className="grid md:grid-cols-[1.4fr_1fr]">
-        <div className="p-5">
-          <div className="mb-2 grid grid-cols-[1fr_5rem_5rem_4rem] items-end gap-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            <span>Bölüm</span><span>Doğru</span><span>Yanlış</span><span className="text-right">Net</span>
-          </div>
-          {def.sections.map(([name, max]) => {
-            const a = ans[`${partKey}.${name}`] ?? { c: 0, w: 0 };
-            return (
-              <div key={name} className="row grid grid-cols-[1fr_5rem_5rem_4rem] items-center gap-3 py-2.5">
-                <div><div className="text-sm text-slate-200">{name}</div><div className="text-[11px] text-slate-500">{max} soru</div></div>
-                <input type="number" inputMode="numeric" min={0} max={max} value={a.c || ''} placeholder="0" aria-label={`${name} doğru`} onChange={e => set(name, max, 'c', e.target.value)} className="num !px-3 !py-2 text-center" />
-                <input type="number" inputMode="numeric" min={0} max={max - a.c} value={a.w || ''} placeholder="0" aria-label={`${name} yanlış`} onChange={e => set(name, max, 'w', e.target.value)} className="num !px-3 !py-2 text-center" />
-                <b className="num text-right text-sm text-slate-100">{fmt(net(a.c, a.w))}</b>
-              </div>);
-          })}
-        </div>
-        <div className="flex flex-col justify-between gap-6 border-t border-white/[0.06] bg-accent/[0.06] p-6 md:border-l md:border-t-0">
-          <div aria-live="polite">
-            <div className="stat-label">Toplam net · {def.label}</div>
-            <div className="num mt-1 text-5xl font-semibold tracking-tight text-slate-50"><CountUp value={cur.n} /><span className="ml-2 text-base font-medium text-slate-500">/ {cur.m}</span></div>
-            <div className="stat-label mt-6">Tahmini puan</div>
-            <div className="num mt-1 text-4xl font-semibold tracking-tight text-accent">{cur.n > 0 ? <CountUp value={Math.round(cur.score * 10) / 10} /> : '—'}</div>
-            {blend !== null && <p className="mt-4 text-sm text-slate-300">TYT ve AYT birlikte yaklaşık <b className="num text-slate-50">{fmt(Math.round(blend * 10) / 10)}</b> yerleştirme puanı.</p>}
-          </div>
-          <p className="text-xs leading-relaxed text-slate-500">Tahmin 100–500 ölçeğinde yaklaşık bir göstergedir. Gerçek puan, sınavın zorluğuna ve adayların genel başarısına göre hesaplanır.</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const FEATURES = [
-  [Layers, 'Gerçek hibrit mimari', 'DGS ve YKS aynı çatı altında ama ayrı çalışma alanlarında yaşar. Denemeler, müfredat, geri sayım ve sıralama her sınava özgüdür; birbirine karışmaz.'],
-  [BarChart3, 'Bölüm bazlı deneme analizi', 'DGS, TYT ve AYT denemelerini bölüm bölüm kaydet. Trend grafikleri ve karşılaştırmalar yalnızca aynı bölümün sonuçları arasında yapılır.'],
-  [Target, 'Hata nedeni analizi', 'Yanlışlarını dikkat, işlem, formül, konu ve süre gibi nedenlere ayır. Hangi hatayı en çok, hangi derste yaptığını net biçimde gör.'],
-  [ShieldCheck, 'Konu güç analizi', 'Çözdüğün sorular ve sonuçların konu bazında değerlendirilir; hangi konuya, ne zaman dönmen gerektiği sana söylenir.'],
-  [Users, 'Arkadaşlarınla rekabet', 'Seçili sınavda haftalık puan sıralaması ve yüz yüze karşılaştırma. Seninle aynı sınava hazırlananlarla yarışırsın.'],
-  [CalendarCheck, 'Çalışma planlayıcı', 'Zamanlayıcı ve pomodoro oturumların kaydedilir; haftalık ilerlemeni ve sınava kalan süreyi tek ekrandan izlersin.'],
-];
-
-const TIPS = {
-  dikkat: 'Soruyu yanlış okumak ya da seçeneği karıştırmak. Çözüm: soru kökünü işaretleyerek oku.',
-  islem: 'Yöntem doğru, hesap yanlış. Çözüm: işlemleri kâğıda düzenli dök, hızdan önce doğruluğu oturt.',
-  konu: 'Konu henüz oturmamış. Müfredattan çalışılacak yer belli.',
-  sure: 'Bilgi var ama zaman yetmedi. Hız çalışmasının zamanı.',
-  formul: 'Formül hafızada değil. Kişisel bir formül kartı hazırlamanın tam zamanı.',
-  diger: 'Sınıflandırılamayan hatalar.',
-};
-const SAMPLE_ERR = { dikkat: 5, islem: 4, formul: 3, konu: 3, sure: 2, diger: 1 };
-
-// Uygulamadaki "Neden yanlış yaptım?" ekranının canlı örneği
-function WhyDemo() {
-  const [sel, setSel] = useState('dikkat');
-  const total = Object.values(SAMPLE_ERR).reduce((a, b) => a + b, 0);
-  const cur = REASONS.find(r => r.key === sel);
-  return (
-    <div className="card !p-6">
-      <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Yanlış nedenleri">
-        {REASONS.map(r => (
-          <motion.button key={r.key} type="button" role="tab" aria-selected={sel === r.key} whileTap={{ scale: 0.94 }} onClick={() => setSel(r.key)}
-            className={clsx('rounded-full border px-4 py-2 text-sm transition', sel === r.key ? 'border-white/30 bg-white/15 text-slate-50' : 'border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/10')}>
-            <span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: r.color }} />{r.label}
-          </motion.button>))}
-      </div>
-      <div className="flex h-14 gap-1 overflow-hidden rounded-2xl" aria-hidden="true">
-        {REASONS.map(r => (
-          <motion.div key={r.key} layout animate={{ flexGrow: sel === r.key ? SAMPLE_ERR[r.key] * 2 : SAMPLE_ERR[r.key], opacity: sel === r.key ? 1 : 0.4 }} transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-            style={{ background: r.color, flexBasis: 0 }} className="flex items-center justify-center text-sm font-bold text-onaccent">{SAMPLE_ERR[r.key]}</motion.div>))}
-      </div>
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.p key={sel} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mt-5 min-h-[3.5rem] text-base text-slate-200">
-          <strong className="text-slate-50">{cur.label}:</strong> {TIPS[sel]} <span className="text-slate-500">(Örnek veri: {total} yanlış)</span>
-        </motion.p>
-      </AnimatePresence>
-    </div>
-  );
-}
-
-const TRACK_CARDS = [
-  ['DGS', 'DGS hesabı', ['Matematik ve Türkçe denemeleri', 'DGS müfredatı ve konu analizi', 'DGS geri sayımı ve sıralaması']],
-  ['YKS', 'YKS hesabı', ['TYT ve AYT denemeleri ayrı ayrı', 'YKS müfredatı ve konu analizi', 'YKS geri sayımı ve sıralaması']],
-  ['BOTH', 'Hibrit hesap', ['İki sınavın tüm modülleri bir arada', 'Tek dokunuşla DGS ⇄ YKS geçişi', 'Veriler ayrı kalır, hiçbir şey karışmaz']],
-];
-
-const STEPS = [
-  ['1', 'Sınavını seç', 'Kayıt sırasında DGS, YKS ya da hibrit hesabı seç. Panel, müfredat ve istatistikler buna göre açılır.'],
-  ['2', 'Denemeni ve çalışmanı kaydet', 'Doğru ve yanlışlarını gir, hata nedenlerini işaretle; analiz otomatik oluşur.'],
-  ['3', 'Gelişimini izle', 'Trendini takip et, zayıf konularını bul ve arkadaşlarınla haftalık sıralamada yarış.'],
-];
+const MAIL = import.meta.env.VITE_CONTACT_EMAIL || '';
+const IMG = (f) => `/landing/${f}`;
 
 const FAQ = [
-  ['Auren ücretsiz mi?', 'Evet. Hesap açmak ve tüm özellikleri kullanmak ücretsizdir.'],
-  ['Hem DGS hem YKS için hazırlanıyorum, ne yapmalıyım?', 'Kayıtta hibrit hesabı seç. İki sınavın modüllerini birlikte açar; üst çubuktan tek dokunuşla geçersin. Verilerin her sınav için ayrı tutulur.'],
-  ['Sonradan sınav türümü değiştirebilir miyim?', 'Evet. Ayarlar sayfasından DGS, YKS ya da hibrit arasında geçiş yapabilirsin. Mevcut verilerin silinmez.'],
-  ['TYT ve AYT netlerim karışır mı?', 'Karışmaz. Karşılaştırma ve trend grafikleri TYT ile AYT için ayrı çalışır.'],
-  ['Arkadaşlarımla nasıl yarışırım?', 'Kullanıcı adıyla arkadaş ekle. Haftalık puan; seçili sınavdaki çalışma süren, çözdüğün soru sayısı ve deneme netlerinden oluşur.'],
-  ['Puan tahmini kesin mi?', 'Hayır; yaklaşık bir göstergedir. Gerçek puan, sınavın zorluğuna ve adayların genel başarısına göre ÖSYM tarafından hesaplanır.'],
+  ['Fiyat', 'Auren ücretsiz mi?', 'Evet. Hesap açmak ve bireysel özelliklerin tümünü kullanmak ücretsizdir.'],
+  ['Hibrit', 'İkisine birden hazırlanabilir miyim?', 'Kayıtta hibrit hesabı seç. İki sınavın modüllerini birlikte açar; üst çubuktan tek dokunuşla geçersin. Verilerin her sınav için ayrı tutulur.'],
+  ['Geçiş', 'Sınav türümü sonra değiştirebilir miyim?', 'Evet. Ayarlar sayfasından DGS, YKS ya da hibrit arasında geçiş yapabilirsin. Mevcut verilerin silinmez.'],
+  ['Netler', 'TYT ve AYT netlerim karışır mı?', 'Karışmaz. Karşılaştırma ve trend grafikleri TYT ile AYT için ayrı çalışır.'],
+  ['Arkadaş', 'Arkadaşlarımla nasıl yarışırım?', 'Kullanıcı adıyla arkadaş ekle. Haftalık puan; seçili sınavdaki çalışma süren, çözdüğün soru sayısı ve deneme netlerinden oluşur.'],
+  ['Puan', 'Puan tahmini kesin mi?', 'Hayır; yaklaşık bir göstergedir. Gerçek puan, sınavın zorluğuna ve adayların genel başarısına göre ÖSYM tarafından hesaplanır.'],
+  ['Dershane', 'Dershane olarak kullanabilir miyiz?', 'Evet. Kurum paneliyle logonuzla markalı bir giriş sayfası, sınıflar, Excel’den toplu öğrenci ekleme ve sınıf değiştirme önerisi alırsınız. Öğrenci hesaplarını siz açarsınız.'],
 ];
-
-function Faq() {
-  const [open, setOpen] = useState(0);
-  return (
-    <div className="grid gap-3">{FAQ.map(([q, a], i) => (
-      <div key={q} className="card !rounded-3xl !p-0">
-        <button type="button" aria-expanded={open === i} aria-controls={`fa-${i}`} onClick={() => setOpen(open === i ? -1 : i)}
-          className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-base font-medium text-slate-100">
-          <span>{q}</span><Plus size={18} className={clsx('flex-none text-slate-400 transition-transform', open === i && 'rotate-45')} />
-        </button>
-        <AnimatePresence initial={false}>
-          {open === i && <motion.div id={`fa-${i}`} role="region" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden"><p className="px-5 pb-5 text-sm leading-relaxed text-slate-400">{a}</p></motion.div>}
-        </AnimatePresence>
-      </div>))}</div>
-  );
-}
 
 const LD = {
   '@context': 'https://schema.org',
@@ -250,125 +31,234 @@ const LD = {
     { '@type': 'WebSite', '@id': `${SITE}/#site`, url: `${SITE}/`, name: 'Auren Study', inLanguage: 'tr-TR', publisher: { '@id': `${SITE}/#org` } },
     { '@type': 'WebApplication', name: 'Auren Study', url: `${SITE}/`, description: DEFAULT_DESC, applicationCategory: 'EducationalApplication', operatingSystem: 'Web', inLanguage: 'tr-TR',
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'TRY' }, publisher: { '@id': `${SITE}/#org` } },
-    { '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+    { '@type': 'FAQPage', mainEntity: FAQ.map(([, q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
   ],
 };
 
-const HEAD = [['DGS', 0], ['ve', 0], ['YKS', 0], ['hazırlığı,', 0], ['tek', 1], ['akıllı', 1], ['çatı', 1], ['altında.', 1]];
-const headList = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } };
-const headWord = { hidden: { opacity: 0, y: 22, filter: 'blur(8px)' }, show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.6, ease: [0.2, 0.7, 0.2, 1] } } };
+const PARTS = [['DGS', EST.DGS.parts.DGS], ['TYT', EST.YKS.parts.TYT], ['AYT', EST.YKS.parts.AYT]];
 
-const MARQUEE = ['Deneme analizi', 'Hata nedeni', 'Konu gücü', 'Pomodoro', 'Haftalık sıralama', 'DGS', 'TYT', 'AYT', 'Geri sayım', 'Arkadaş düellosu'];
-const Marquee = () => (
-  <div aria-hidden="true" className="relative mx-auto max-w-6xl overflow-hidden px-4 py-6 [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
-    <div className="marquee flex w-max gap-3">{[...MARQUEE, ...MARQUEE].map((m, i) => <span key={i} className="glass-pill whitespace-nowrap px-4 py-1.5 text-xs font-medium text-slate-300">{m}</span>)}</div>
-  </div>
-);
+/* Canlı net hesabı: doğru − yanlış/4. Yazdıkça toplam ve yaklaşık puan değişir. */
+function Calc() {
+  const [k, setK] = useState(0);
+  const [ans, setAns] = useState({});
+  const [label, def] = PARTS[k];
+  const set = (name, max, key, raw) => {
+    const v = Math.max(0, Math.min(max, parseInt(raw, 10) || 0));
+    setAns(p => {
+      const id = `${label}.${name}`, cur = { c: 0, w: 0, ...p[id], [key]: v };
+      if (cur.c + cur.w > max) { if (key === 'c') cur.w = max - cur.c; else cur.c = max - cur.w; }
+      return { ...p, [id]: cur };
+    });
+  };
+  const mine = Object.fromEntries(def.sections.map(([n]) => [n, ans[`${label}.${n}`] ?? { c: 0, w: 0 }]));
+  const total = partNet(def.sections, mine), max = partMax(def.sections);
+  return (
+    <div className="ln-calc">
+      <div>
+        <div className="ln-tabs" role="tablist" aria-label="Sınav bölümü">
+          {PARTS.map(([l], i) => <button key={l} role="tab" type="button" aria-selected={k === i} onClick={() => setK(i)}>{l}</button>)}
+        </div>
+        <h2 style={{ marginTop: 28 }}>Kendi netini şimdi hesapla.</h2>
+        <p className="d">Doğru ve yanlış sayını yaz. Her dört yanlış bir doğruyu götürür; Auren bunu senin yerine hesaplar.</p>
+      </div>
+      <table className="ln-sheet">
+        <thead><tr><th scope="col">Bölüm</th><th scope="col">Doğru</th><th scope="col">Yanlış</th><th scope="col" style={{ textAlign: 'right' }}>Net</th></tr></thead>
+        <tbody>{def.sections.map(([name, m]) => {
+          const a = mine[name];
+          return (
+            <tr key={name}>
+              <td>{name}<br /><small style={{ color: 'var(--paper-muted)' }}>{m} soru</small></td>
+              <td><input type="number" inputMode="numeric" min={0} max={m} value={a.c || ''} placeholder="0" aria-label={`${name} doğru`} onChange={e => set(name, m, 'c', e.target.value)} /></td>
+              <td><input type="number" inputMode="numeric" min={0} max={m - a.c} value={a.w || ''} placeholder="0" aria-label={`${name} yanlış`} onChange={e => set(name, m, 'w', e.target.value)} /></td>
+              <td className="n">{fmt(net(a.c, a.w))}</td>
+            </tr>);
+        })}</tbody>
+      </table>
+      <div className="ln-total" aria-live="polite">
+        <span>Toplam net<small>/ {max} · yaklaşık puan {total > 0 ? fmt(Math.round(approxScore(total, max) * 10) / 10) : '—'}</small></span>
+        <b>{fmt(total)}</b>
+      </div>
+      <div className="ln-cells">
+        <Link className="a" to="/kayit">Ücretsiz başla</Link>
+        <Link className="b" to="/giris">Giriş yap</Link>
+      </div>
+    </div>
+  );
+}
+
+const MENU = [
+  ['Denemeler', [['Bölüm bazlı analiz', 'DGS, TYT ve AYT ayrı ayrı', 'Net'], ['Hata nedeni', 'Dikkat, işlem, formül, konu, süre', 'Neden']]],
+  ['Çalışma', [['Konu gücü', 'Hangi konuya ne zaman dönmeli', 'Konu'], ['Zamanlayıcı', 'Pomodoro ve oturum kaydı', 'Süre'], ['Geri sayım', 'Sınava kalan süre tek ekranda', 'Gün']]],
+  ['Birlikte', [['Arkadaşlar', 'Haftalık puan sıralaması', 'Düello'], ['Kurum paneli', 'Sınıflar, öğretmenler, Excel ile ekleme', 'Dershane']]],
+];
+
+const MOMENTS = [
+  ['Sınavını seç', 'DGS, YKS ya da ikisi. Panel, müfredat ve istatistikler buna göre açılır.', 'penpencil.jpg', 'Optik okuyucu kalemi ve kurşun kalem', 'center'],
+  ['Denemeni kaydet', 'Doğru ve yanlışını gir, hata nedenini işaretle. Analiz kendiliğinden oluşur.', 'marksheet-1-jpg.jpg', 'Cevap kâğıtları', '30% 40%'],
+  ['Süreni say', 'Zamanlayıcıyla çalışma oturumların kaydedilir; haftalık ilerlemen görünür.', 'stopwatch.jpg', 'Kronometre', 'center'],
+  ['Gelişimini izle', 'Trendini takip et, zayıf konunu bul, arkadaşlarınla haftalık sırada yarış.', 'scanner.jpg', 'Optik okuyucu makinesi', '20% 30%'],
+];
+
+function How() {
+  const row = useRef(null); const [p, setP] = useState(0.2);
+  const upd = () => { const e = row.current; if (!e) return; const m = e.scrollWidth - e.clientWidth; setP(m > 0 ? 0.2 + 0.8 * (e.scrollLeft / m) : 1); };
+  const go = (d) => row.current?.scrollBy({ left: d * 312, behavior: 'smooth' });
+  return (
+    <section className="ln-sec ln-how" id="nasil" aria-labelledby="how-h">
+      <div className="ln-wrap">
+        <div className="head"><h2 id="how-h">Dört adımda hazırlık</h2>
+          <div className="ln-arrows"><button type="button" onClick={() => go(-1)} aria-label="Geri">←</button><button type="button" onClick={() => go(1)} aria-label="İleri">→</button></div></div>
+        <div className="ln-bar" aria-hidden="true"><i style={{ width: `${p * 100}%` }} /></div>
+      </div>
+      <ul className="ln-row" ref={row} onScroll={upd} tabIndex={0} aria-label="Adımlar">
+        {MOMENTS.map(([t, d, img, alt, pos], i) => (
+          <li className="ln-col" key={t} style={{ minHeight: 440 }}>
+            <h3>{i + 1}. {t}</h3><p>{d}</p>
+            <figure style={{ marginTop: 'auto', paddingTop: 24 }}><img src={IMG(img)} alt={alt} loading="lazy" style={{ aspectRatio: i % 2 ? '4/5' : '1', objectFit: 'cover', objectPosition: pos }} /></figure>
+          </li>))}
+      </ul>
+    </section>
+  );
+}
+
+function Coupon() {
+  const [f, setF] = useState({ kurum: '', ad: '', sayi: '100-300' });
+  const send = (e) => {
+    e.preventDefault();
+    const body = `Kurum: ${f.kurum}\nYetkili: ${f.ad}\nÖğrenci sayısı: ${f.sayi}\n\nAuren kurum paneli hakkında bilgi almak istiyoruz.`;
+    window.location.href = MAIL ? `mailto:${MAIL}?subject=${encodeURIComponent('Kurum paneli: ' + f.kurum)}&body=${encodeURIComponent(body)}` : 'https://instagram.com/eminuyksz';
+  };
+  const set = (k) => (e) => setF(s => ({ ...s, [k]: e.target.value }));
+  return (
+    <section className="ln-sec ln-contact" id="dershane" aria-labelledby="ct-h">
+      <div className="ln-wrap">
+        <div className="ln-coupon">
+          <i className="perf" aria-hidden="true" />
+          <div className="l">
+            <div><h2 id="ct-h">Dershaneniz için kurum paneli.</h2>
+              <ul><li>Logonuzla markalı giriş sayfası</li><li>Excel’den yapıştırarak toplu öğrenci ekleme</li><li>Sınıflar, öğretmenler, sınıf değiştirme önerisi</li><li>Giriş bilgileri tek tıkla yazdırılır</li></ul></div>
+            <p>Öğrenci hesaplarını siz açarsınız; öğrenciler yalnızca kendi kurumlarındakilerle görünür.</p>
+          </div>
+          <form onSubmit={send}>
+            <input required placeholder="Kurum adı" aria-label="Kurum adı" value={f.kurum} onChange={set('kurum')} autoComplete="organization" />
+            <input required placeholder="Yetkili adı soyadı" aria-label="Yetkili adı soyadı" value={f.ad} onChange={set('ad')} autoComplete="name" />
+            <select aria-label="Öğrenci sayısı" value={f.sayi} onChange={set('sayi')}><option>100’den az</option><option>100-300</option><option>300-1000</option><option>1000’den fazla</option></select>
+            <button className="go" type="submit">Bilgi iste</button>
+            <p className="note">{MAIL ? 'E-posta uygulaman hazır bir mesajla açılır.' : 'Instagram üzerinden bize ulaşırsın.'}</p>
+          </form>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Faq() {
+  const [open, setOpen] = useState(0);
+  return (
+    <div className="stack">{FAQ.map(([tab, q, a], i) => {
+      const colors = ['#f2f0e8', '#e6dccf', '#dfe5dc', '#f2f0e8', '#e3e1d6', '#dfe5dc', '#e6dccf'];
+      return (
+        <div key={q} className="ln-fq" data-open={open === i} style={{ '--tx': `${(i % 4) * 18}%`, '--c': colors[i] }} data-r>
+          <span className="tab" aria-hidden="true">{tab}</span>
+          <h3 style={{ all: 'unset' }}><button type="button" aria-expanded={open === i} aria-controls={`fq-${i}`} onClick={() => setOpen(open === i ? -1 : i)}><span>{q}</span><span className="pm" aria-hidden="true">+</span></button></h3>
+          <div className="ans" id={`fq-${i}`} role="region"><div><p>{a}</p></div></div>
+        </div>);
+    })}</div>
+  );
+}
 
 export default function Landing() {
-  const { theme, toggleMode } = useTheme(); const light = theme === 'light';
-  const { scrollY } = useScroll(); const cardY = useTransform(scrollY, [0, 600], [0, -36]); const orbY = useTransform(scrollY, [0, 800], [0, 120]);
-  const link = 'text-sm text-slate-400 transition hover:text-slate-100';
+  const root = useRef(null), foot = useRef(null);
+  useEffect(() => {
+    const r = root.current; r.classList.add('ln-js');
+    const els = [...r.querySelectorAll('[data-r]')];
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    els.forEach((e, i) => { e.style.setProperty('--i', String(i % 4)); io.observe(e); });
+    // Perde: alt bilgi sabit durur, sayfa üstünden kalkar (yalnızca geniş ekran)
+    const fit = () => r.style.setProperty('--foot-h', `${foot.current?.offsetHeight ?? 560}px`);
+    fit(); const ro = new ResizeObserver(fit); ro.observe(foot.current);
+    return () => { io.disconnect(); ro.disconnect(); r.classList.remove('ln-js'); };
+  }, []);
+
   return (
-    <MotionConfig reducedMotion="user">
-    <div className="relative">
-      <ScrollBar />
+    <div className="ln" ref={root}>
       <JsonLd data={LD} />
-      <header className="sticky top-0 z-30 px-4 pt-3">
-        <div className="glass-pill mx-auto flex max-w-6xl items-center justify-between gap-3 py-2 pl-5 pr-2">
-          <Link to="/" className="text-lg font-bold text-slate-100" aria-label="Auren ana sayfa">Auren</Link>
-          <nav aria-label="Ana menü" className="hidden gap-7 md:flex"><a href="#ozellikler" className={link}>Özellikler</a><a href="#hata" className={link}>Hata analizi</a><a href="#hesapla" className={link}>Net ve puan</a><a href="#sss" className={link}>SSS</a></nav>
-          <div className="flex items-center gap-1.5">
-            <button type="button" onClick={toggleMode} aria-label={light ? 'Koyu temaya geç' : 'Açık temaya geç'} className="btn-ghost !px-3 !py-2">{light ? <Moon size={16} /> : <Sun size={16} />}</button>
-            <Link to="/giris" className="btn-ghost hidden sm:inline-flex">Giriş</Link>
-            <Link to="/kayit" className="btn btn-shine !py-2">Başla</Link>
-          </div>
-        </div>
+      <a href="#ana" className="ln-sr">İçeriğe geç</a>
+      <header className="ln-top">
+        <Link to="/" className="ln-mark" aria-label="Auren ana sayfa">Auren</Link>
+        <nav className="ln-links" aria-label="Ana menü"><a href="#hesapla">Net hesabı</a><a href="#ozellikler">Özellikler</a><a href="#dershane">Dershaneler</a><a href="#sss">SSS</a></nav>
+        <div className="ln-top-act"><Link to="/giris" className="ln-btn plain">Giriş</Link></div>
       </header>
 
-      <main>
-        <div className="relative">
-          <motion.div aria-hidden="true" style={{ y: orbY }} className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-            <div className="float-slow absolute -left-24 top-10 h-72 w-72 rounded-full sm:h-96 sm:w-96" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .18), transparent)' }} />
-            <div className="float-slow absolute -right-20 top-40 h-72 w-72 rounded-full [animation-delay:-6s] sm:h-[28rem] sm:w-[28rem]" style={{ background: 'radial-gradient(closest-side, rgb(var(--cyan2) / .16), transparent)' }} />
-          </motion.div>
-        <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-6 pt-16 md:grid-cols-[1.1fr_1fr] md:pt-24" aria-labelledby="hero-h">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.2, 0.7, 0.2, 1] }}>
-            <ModeSwitch local />
-            <motion.h1 id="hero-h" variants={headList} initial="hidden" animate="show" className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">
-              {HEAD.map(([w, hl], i) => <motion.span key={i} variants={headWord} className={clsx('mr-[0.28em] inline-block', hl && 'text-shine')}>{w}</motion.span>)}
-            </motion.h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-400">Auren, iki sınavı aynı hassasiyetle yöneten hibrit bir hazırlık sistemi. Denemelerini analiz eder, hatalarının nedenini bulur, çalışmanı planlar ve seni arkadaşlarınla birlikte ileri taşır.</p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link to="/kayit" className="btn btn-shine !px-6 !py-3">Ücretsiz başla <ArrowRight size={16} /></Link>
-              <a href="#ozellikler" className="btn-ghost !px-6 !py-3">Neler sunuyor?</a>
+      <main className="ln-main" id="ana">
+        <section className="ln-hero" aria-labelledby="hero-h">
+          <article className="ln-card">
+            <i className="ln-corner tl" aria-hidden="true" /><i className="ln-corner tr" aria-hidden="true" />
+                        <h1 id="hero-h"><span>Denemelerin</span><span>konuşuyor.</span></h1>
+            <p className="sub">DGS ve YKS denemelerini kaydet; Auren her yanlışın nedenini, her konunun gücünü ve haftalık ilerlemeni gösterir.</p>
+            <p className="facts"><span>DGS</span><i aria-hidden="true" /><span>TYT</span><i aria-hidden="true" /><span>AYT</span><i aria-hidden="true" /><span>Ücretsiz</span></p>
+            <div className="acts">
+              <Link to="/kayit" className="ln-btn olive">Ücretsiz başla</Link>
+              <a href="#hesapla" className="ln-btn plain">Netini hesapla ↓</a>
             </div>
-          </motion.div>
-          <motion.div style={{ y: cardY }} className="md:will-change-transform"><motion.div initial={{ opacity: 0, y: 32, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.8, delay: 0.15, ease: [0.2, 0.7, 0.2, 1] }}><SampleCard /></motion.div></motion.div>
+            <div className="shotw"><img className="shot" src={IMG('marksheet-1-jpg.jpg')} alt="Optik cevap kâğıtları" /></div>
+          </article>
         </section>
-        <Marquee />
-        </div>
 
-        <Section plain id="ozellikler" title="Hazırlığın her adımı için eksiksiz bir sistem" lead="Tek bir uygulamada, iki sınavın tüm ihtiyaçları. Her modül seçtiğin sınava göre şekillenir.">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{FEATURES.map(([Icon, t, d], i) => (
-            <SpotCard key={t} index={i % 3} className="group !p-6">
-              <motion.span whileHover={{ rotate: -8, scale: 1.12 }} transition={{ type: 'spring', stiffness: 300, damping: 14 }} className="mb-4 grid h-10 w-10 place-items-center rounded-2xl bg-accent/15 text-accent transition-colors group-hover:bg-accent group-hover:text-onaccent"><Icon size={20} strokeWidth={1.8} /></motion.span>
-              <h3 className="text-lg font-semibold text-slate-50">{t}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{d}</p>
-            </SpotCard>))}</div>
-        </Section>
+        <section className="ln-show" id="hesapla" aria-label="Net hesabı">
+          <div className="ln-plate" data-r>
+            <figure><img src={IMG('marksheet-2-jpg.jpg')} alt="Doldurulmaya hazır optik cevap kâğıdı" loading="lazy" /><figcaption>Optik cevap kâğıdı</figcaption></figure>
+          </div>
+          <Calc />
+        </section>
 
-        <Section id="hata" title="Her yanlışın bir nedeni var" lead="Yalnızca kaç yanlış yaptığını değil, neden yaptığını da kaydet. Auren, hangi hatayı en çok yaptığını ve hangi derste yoğunlaştığını gösterir.">
-          <WhyDemo />
-        </Section>
-
-        <Section plain id="hibrit" title="Tek hesap, iki sınav, sıfır karışıklık" lead="Sadece DGS’ye, sadece YKS’ye ya da ikisine birden hazırlanıyor olabilirsin. Panel, seçimine göre şekillenir ve istediğin an değiştirebilirsin.">
-          <div className="grid gap-4 md:grid-cols-3">{TRACK_CARDS.map(([id, t, items], i) => (
-            <SpotCard key={id} index={i} className={clsx('!p-6', id === 'BOTH' && '!border-accent/40')}>
-              <div className="flex items-center justify-between"><h3 className="text-lg font-semibold text-slate-50">{t}</h3>{id === 'BOTH' && <span className="badge bg-accent/15 text-accent">Esnek</span>}</div>
-              <ul className="mt-4 space-y-2.5">{items.map(i => <li key={i} className="flex gap-2.5 text-sm text-slate-300"><span aria-hidden="true" className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-accent" />{i}</li>)}</ul>
-            </SpotCard>))}</div>
-        </Section>
-
-        <Section id="hesapla" title="Net ve puan tahmini" lead="Sınavını seç, doğru ve yanlış sayılarını gir; netin ve yaklaşık puanın anında hesaplansın.">
-          <Estimator />
-        </Section>
-
-        <Section plain id="nasil" title="Nasıl çalışır?">
-          <ol className="grid gap-4 md:grid-cols-3">{STEPS.map(([n, t, d], i) => (
-            <li key={n} className="contents"><SpotCard index={i} className="!p-6">
-              <span className="relative grid h-9 w-9 place-items-center">
-                <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-accent/30 [animation-duration:2.8s]" />
-                <span className="num relative grid h-9 w-9 place-items-center rounded-full bg-accent text-sm font-bold text-onaccent">{n}</span>
-              </span>
-              <h3 className="mt-4 text-lg font-semibold text-slate-50">{t}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{d}</p>
-            </SpotCard></li>))}</ol>
-        </Section>
-
-        <Section id="sss" title="Sık sorulan sorular" className="max-w-3xl"><Faq /></Section>
-
-        <section className="mx-auto w-full max-w-6xl px-4 pb-20" aria-labelledby="cta-h">
-          <Reveal>
-            <div className="card spot overflow-hidden !p-8 text-center md:!p-14" onPointerMove={trackPointer}>
-              <div aria-hidden="true" className="float-slow pointer-events-none absolute -top-24 left-1/2 -z-10 h-64 w-[34rem] max-w-full -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .22), transparent)' }} />
-              <h2 id="cta-h" className="text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl">Hazırlığını bugün bir üst seviyeye taşı.</h2>
-              <p className="mx-auto mt-3 max-w-md text-slate-400">Hesabını oluştur, sınavını seç; akıllı panelin hazır.</p>
-              <div className="mt-7 flex flex-wrap justify-center gap-3"><Link to="/kayit" className="btn btn-shine !px-7 !py-3">Ücretsiz hesap aç</Link><Link to="/giris" className="btn-ghost !px-7 !py-3">Giriş yap</Link></div>
+        <section className="ln-sec ln-feat" id="ozellikler" aria-label="Özellikler">
+          <div className="ln-wrap wrap">
+            <div className="side" data-r><p>Tek uygulama, iki sınav. Her modül seçtiğin sınava göre şekillenir.</p></div>
+            <article className="ln-menu" data-r>
+              <h2>Neler var?</h2>
+              {MENU.map(([grp, items]) => (
+                <div key={grp}><h3>{grp}</h3>
+                  <ul>{items.map(([n, d, v]) => (
+                    <li key={n}><div className="mr"><b>{n}</b><span className="dots" aria-hidden="true" /><em>{v}</em></div><p className="d">{d}</p></li>))}</ul></div>))}
+            </article>
+            <div className="side r" data-r>
+              <figure><img src={IMG('scanner.jpg')} alt="Optik okuyucu makinesi" loading="lazy" style={{ objectPosition: '15% 35%' }} /><figcaption>Yakında: optik okuyucu desteği</figcaption></figure>
             </div>
-          </Reveal>
+          </div>
+        </section>
+
+        <How />
+        <Coupon />
+
+        <section className="ln-sec ln-faq" id="sss" aria-labelledby="faq-h">
+          <div className="ln-wrap"><h2 className="ln-h" id="faq-h" data-r>Sık sorulan sorular</h2><Faq /></div>
+        </section>
+
+        <section className="ln-cta" aria-labelledby="cta-h">
+          <p className="txt" data-r>Hazırlığını bugün bir üst seviyeye taşı.</p>
+          <div className="reply" data-r>
+            <h2 id="cta-h">Hesabını aç, sınavını seç.</h2>
+            <p>Panelin birkaç saniyede hazır. Kredi kartı yok, süre sınırı yok.</p>
+            <Link to="/kayit" className="ln-btn olive">Ücretsiz hesap aç</Link>
+          </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/[0.06] px-4 py-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-slate-400">
-          <span className="font-bold text-slate-200">Auren Study <span className="ml-1 text-xs font-normal text-slate-500">aurenstudy.com.tr</span></span>
-          <nav aria-label="Alt menü" className="flex gap-6"><a href="#ozellikler" className={link}>Özellikler</a><a href="#sss" className={link}>SSS</a><Link to="/giris" className={link}>Giriş</Link><Link to="/kayit" className={link}>Kayıt ol</Link></nav>
-          <LegalLinks className="w-full justify-center text-xs text-slate-500 md:order-last" />
-          <p className="text-xs text-slate-500">Geliştirici &amp; tasarımcı: <a className="text-slate-300 hover:underline" href="https://github.com/EminUykusuz" target="_blank" rel="noopener noreferrer">Emin Uykusuz</a> · <a className="text-slate-300 hover:underline" href="https://instagram.com/eminuyksz" target="_blank" rel="noopener noreferrer">@eminuyksz</a></p>
+      <footer className="ln-foot" ref={foot}>
+        <div className="ln-back on-paper">
+          <div><h2>Auren Study</h2><p className="msg">DGS ve YKS hazırlığı için hibrit çalışma sistemi.</p></div>
+          <ul>
+            <li><Link to="/giris">Giriş yap</Link></li><li><Link to="/kayit">Kayıt ol</Link></li><li><a href="#dershane">Dershaneler için</a></li>
+            <li><LegalLinks /></li>
+          </ul>
+          <div className="ln-stamp" aria-hidden="true"><img src={IMG('stopwatch.jpg')} alt="" loading="lazy" /></div>
+          <p className="ln-imprint">
+            Geliştirici &amp; tasarımcı: <a href="https://github.com/EminUykusuz" target="_blank" rel="noopener noreferrer">Emin Uykusuz</a> · <a href="https://instagram.com/eminuyksz" target="_blank" rel="noopener noreferrer">@eminuyksz</a><br />
+            Görseller: “Mark sheets” ve “Mark-sheet” (Genppy, kamu malı, Wikimedia Commons); “Scantron 888P+ machine” (Packer1028, CC0); “Stoppuhr hanhart” (kamu malı); “A scantron pen and a mechanical pencil…” (고려, <a href="https://creativecommons.org/licenses/by/4.0" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>, Wikimedia Commons).
+          </p>
         </div>
       </footer>
     </div>
-    </MotionConfig>
   );
 }
