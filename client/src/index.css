@@ -39,7 +39,7 @@ html[data-glow='off'] .ambient-glow { display: none; }
   html, body, #root { min-height: 100%; }
   .grid > * { min-width: 0; }   /* grafik/tablolu grid çocukları taşmasın (mobil yatay kaydırma) */
   body { @apply bg-obsidian text-slate-300 antialiased; line-height: 1.5; transition: background-color .25s; }
-  input, select { @apply w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-100 transition placeholder:text-slate-500 focus:border-accent/60 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-accent/20; }
+  input, select, textarea { @apply w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-100 resize-y transition placeholder:text-slate-500 focus:border-accent/60 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-accent/20; }
   select option, select optgroup { @apply bg-slate-900 text-slate-100; }
   /* iOS, 16px altı alanlara odaklanınca sayfayı yakınlaştırır; giriş/kayıt formunda bunu önler */
   @media (max-width: 639px) { .auth-page input:not([type='checkbox']) { font-size: 16px; } }
