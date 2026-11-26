@@ -5,6 +5,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { query, tx } from '../db.js';
 import { requireStaff, requireOwner, validate, wrap, assignedClassIds } from '../security.js';
+import { sendXlsx } from '../xlsx.js';
 import { asciiFold, makeUsername, genPassword, parseStudentText, canTransfer, suggestPlacement, MAX_BULK } from '../kurum-lib.js';
 
 const r = Router();
@@ -384,6 +385,38 @@ r.get('/overview', ...requireStaff, wrap(async (req, res) => {
     (SELECT COUNT(*) FROM dbo.Classes c WHERE c.InstitutionId=@inst AND c.IsArchived=0 ${req.role === 'owner' ? '' : 'AND c.Id IN (SELECT ClassId FROM dbo.TeacherClasses WHERE TeacherId=@me)'}) AS Classes,
     (SELECT StudentLimit FROM dbo.Institutions WHERE Id=@inst) AS StudentLimit`, scopeParams(req));
   res.json({ students: o.Students, activeWeek: o.ActiveWeek, pendingFirstLogin: o.NeverLoggedIn, classes: o.Classes, studentLimit: o.StudentLimit });
+}));
+
+// ---------- Excel dışa aktarma (kapsam: yönetici → kurum, öğretmen → atandığı sınıflar) ----------
+const n2 = (v) => (v == null ? null : Math.round(Number(v) * 100) / 100);
+const EXPORT_CAP = 20000;
+
+r.get('/export/students.xlsx', ...requireStaff, wrap(async (req, res) => {
+  const rows = await query(`SELECT u.Username, u.FullName, u.StudentNo, c.Name AS ClassName, u.IsDisabled, CONVERT(char(10), u.LastLoginAt, 23) AS LastLogin,
+      (SELECT COUNT(*) FROM dbo.TrialExams e WHERE e.UserId=u.Id) AS ExamCount, le.ExamName AS LastExam, le.ExamPart AS LastPart, le.TotalNet AS LastNet, CONVERT(char(10), le.ExamDate, 23) AS LastExamDate,
+      (SELECT COALESCE(SUM(s.DurationMinutes),0) FROM dbo.StudySessions s WHERE s.UserId=u.Id AND s.StudyDate >= DATEADD(day,-7,CAST(GETDATE() AS date))) AS WeekMin
+    FROM dbo.Users u LEFT JOIN dbo.Classes c ON c.Id=u.ClassId
+    OUTER APPLY (SELECT TOP 1 e.ExamName, e.ExamPart, e.TotalNet, e.ExamDate FROM dbo.TrialExams e WHERE e.UserId=u.Id ORDER BY e.ExamDate DESC, e.Id DESC) le
+    WHERE u.Role='student' AND ${scopeSql(req)} ORDER BY c.Name, u.FullName`, scopeParams(req));
+  sendXlsx(res, 'ogrenciler', [{ name: 'Öğrenciler', widths: [22, 26, 12, 12, 10, 14, 14, 24, 10, 10, 14, 16], rows: [
+    ['Kullanıcı adı', 'Ad soyad', 'Öğrenci no', 'Sınıf', 'Durum', 'Son giriş', 'Deneme sayısı', 'Son deneme', 'Bölüm', 'Son net', 'Son deneme tarihi', 'Son 7 gün çalışma (dk)'],
+    ...rows.map(s => [s.Username, s.FullName ?? '', s.StudentNo ?? '', s.ClassName ?? '', s.IsDisabled ? 'Pasif' : 'Aktif', s.LastLogin ?? '', s.ExamCount, s.LastExam ?? '', s.LastPart ?? '', n2(s.LastNet), s.LastExamDate ?? '', s.WeekMin]),
+  ] }]);
+}));
+
+r.get('/export/exams.xlsx', ...requireStaff, wrap(async (req, res) => {
+  const exams = await query(`SELECT TOP (${EXPORT_CAP}) u.Username, u.FullName, c.Name AS ClassName, e.Id AS ExamId, e.ExamType, e.ExamPart, e.ExamName, CONVERT(char(10), e.ExamDate, 23) AS ExamDate, e.TotalNet
+    FROM dbo.TrialExams e JOIN dbo.Users u ON u.Id=e.UserId LEFT JOIN dbo.Classes c ON c.Id=u.ClassId
+    WHERE u.Role='student' AND ${scopeSql(req)} ORDER BY e.ExamDate DESC, e.Id DESC`, scopeParams(req));
+  const ids = exams.map(e => e.ExamId); // veritabanından gelen tam sayılar
+  const secs = ids.length ? await query(`SELECT s.ExamId, s.SectionKey, s.Correct, s.Wrong, s.Net FROM dbo.TrialExamSections s WHERE s.ExamId IN (${ids.join(',')})`) : [];
+  const byExam = new Map(exams.map(e => [e.ExamId, e]));
+  sendXlsx(res, 'denemeler', [
+    { name: 'Denemeler', widths: [22, 26, 12, 8, 8, 28, 12, 10], rows: [['Kullanıcı adı', 'Ad soyad', 'Sınıf', 'Sınav', 'Bölüm', 'Deneme', 'Tarih', 'Toplam net'],
+      ...exams.map(e => [e.Username, e.FullName ?? '', e.ClassName ?? '', e.ExamType, e.ExamPart, e.ExamName, e.ExamDate, n2(e.TotalNet)])] },
+    { name: 'Bölüm sonuçları', widths: [22, 26, 12, 28, 12, 14, 8, 8, 8], rows: [['Kullanıcı adı', 'Ad soyad', 'Sınıf', 'Deneme', 'Tarih', 'Bölüm', 'Doğru', 'Yanlış', 'Net'],
+      ...secs.map(s => { const e = byExam.get(s.ExamId); return [e.Username, e.FullName ?? '', e.ClassName ?? '', e.ExamName, e.ExamDate, s.SectionKey, s.Correct, s.Wrong, n2(s.Net)]; })] },
+  ]);
 }));
 
 export default r;

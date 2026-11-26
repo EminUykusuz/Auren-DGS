@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query, tx } from '../db.js';
 import bcrypt from 'bcryptjs';
 import { requireAdmin, validate, wrap } from '../security.js';
+import { sendXlsx } from '../xlsx.js';
 import { makeSlug, SLUG_RE, makeUsername, genPassword, asciiFold } from '../kurum-lib.js';
 
 const r = Router();
@@ -157,6 +158,70 @@ r.post('/institutions/:id/reset-owner', validate(idParam, 'params'), wrap(async 
   const pw = genPassword(10);
   await query(`UPDATE dbo.Users SET PasswordHash=@h, MustChangePassword=1 WHERE Id=@id`, { h: await bcrypt.hash(pw, 10), id: o.Id });
   res.json({ username: o.Username, password: pw });
+}));
+
+// ---------- Platform sahibi: her şeyi gör (salt okunur, kurum süzgeci yok) ----------
+const round2 = (v) => (v == null ? null : Math.round(Number(v) * 100) / 100);
+const hiddenMail = (e) => (/@ogrenci\.invalid$/i.test(e ?? '') ? '' : e);
+
+// Bir kurumun bütünü: sınıflar (öğrenci/deneme sayısı) ve tüm kişiler
+r.get('/institutions/:id/detail', validate(idParam, 'params'), wrap(async (req, res) => {
+  const id = req.params.id;
+  const [inst] = await query(`SELECT Id, Name, Slug, ExamTrack, StudentLimit, IsActive, PrimaryColor, CreatedAt FROM dbo.Institutions WHERE Id=@id`, { id });
+  if (!inst) return res.status(404).json({ error: 'Bulunamadı' });
+  const classes = await query(`SELECT c.Id, c.Name, c.IsArchived,
+      (SELECT COUNT(*) FROM dbo.Users u WHERE u.ClassId=c.Id AND u.Role='student') AS Students,
+      (SELECT COUNT(*) FROM dbo.TrialExams e JOIN dbo.Users u ON u.Id=e.UserId WHERE u.ClassId=c.Id) AS Exams
+    FROM dbo.Classes c WHERE c.InstitutionId=@id ORDER BY c.IsArchived, c.Name`, { id });
+  const people = await query(`SELECT u.Id, u.Username, u.FullName, u.Role, u.StudentNo, u.IsDisabled, u.MustChangePassword, c.Name AS ClassName, CONVERT(char(10), u.LastLoginAt, 23) AS LastLogin,
+      (SELECT COUNT(*) FROM dbo.TrialExams e WHERE e.UserId=u.Id) AS Exams
+    FROM dbo.Users u LEFT JOIN dbo.Classes c ON c.Id=u.ClassId WHERE u.InstitutionId=@id ORDER BY u.Role, c.Name, u.FullName`, { id });
+  res.json({
+    institution: { id: inst.Id, name: inst.Name, slug: inst.Slug, examTrack: inst.ExamTrack, studentLimit: inst.StudentLimit, isActive: !!inst.IsActive, color: inst.PrimaryColor, createdAt: inst.CreatedAt },
+    classes: classes.map(c => ({ id: c.Id, name: c.Name, archived: !!c.IsArchived, students: c.Students, exams: c.Exams })),
+    people: people.map(p => ({ id: p.Id, username: p.Username, fullName: p.FullName ?? '', role: p.Role, studentNo: p.StudentNo ?? '', disabled: !!p.IsDisabled, mustChangePassword: !!p.MustChangePassword, className: p.ClassName ?? '', lastLogin: p.LastLogin ?? null, exams: p.Exams })),
+  });
+}));
+
+// Tek kullanıcı: profil, kurum/sınıf, son denemeler (bölümleriyle) ve son çalışma oturumları
+r.get('/users/:id/detail', validate(idParam, 'params'), wrap(async (req, res) => {
+  const id = req.params.id;
+  const [u] = await query(`SELECT u.Id, u.Username, u.Email, u.FullName, u.IsAdmin, u.IsDisabled, u.Role, u.StudentNo, u.ExamTrack, u.ExamMode, u.CreatedAt, CONVERT(char(10), u.LastLoginAt, 23) AS LastLogin,
+      i.Name AS InstitutionName, c.Name AS ClassName
+    FROM dbo.Users u LEFT JOIN dbo.Institutions i ON i.Id=u.InstitutionId LEFT JOIN dbo.Classes c ON c.Id=u.ClassId WHERE u.Id=@id`, { id });
+  if (!u) return res.status(404).json({ error: 'Bulunamadı' });
+  const exams = await query(`SELECT TOP 30 e.Id, e.ExamType, e.ExamPart, e.ExamName, CONVERT(char(10), e.ExamDate, 23) AS ExamDate, e.TotalNet FROM dbo.TrialExams e WHERE e.UserId=@id ORDER BY e.ExamDate DESC, e.Id DESC`, { id });
+  const ids = exams.map(e => e.Id);
+  const secs = ids.length ? await query(`SELECT ExamId, SectionKey, Correct, Wrong, Net FROM dbo.TrialExamSections WHERE ExamId IN (${ids.join(',')})`) : [];
+  const sessions = await query(`SELECT TOP 30 CONVERT(char(10), StudyDate, 23) AS StudyDate, TopicKey, DurationMinutes FROM dbo.StudySessions WHERE UserId=@id ORDER BY StudyDate DESC, Id DESC`, { id });
+  res.json({
+    user: { id: u.Id, username: u.Username, email: hiddenMail(u.Email), fullName: u.FullName ?? '', isAdmin: !!u.IsAdmin, disabled: !!u.IsDisabled, role: u.Role ?? 'bireysel', studentNo: u.StudentNo ?? '', examTrack: u.ExamTrack, examMode: u.ExamMode, createdAt: u.CreatedAt, lastLogin: u.LastLogin ?? null, institution: u.InstitutionName ?? null, className: u.ClassName ?? null },
+    exams: exams.map(e => ({ id: e.Id, type: e.ExamType, part: e.ExamPart, name: e.ExamName, date: e.ExamDate, totalNet: round2(e.TotalNet), sections: secs.filter(s => s.ExamId === e.Id).map(s => ({ key: s.SectionKey, correct: s.Correct, wrong: s.Wrong, net: round2(s.Net) })) })),
+    sessions: sessions.map(s => ({ date: s.StudyDate, topic: s.TopicKey, minutes: s.DurationMinutes })),
+  });
+}));
+
+// Tüm platform: tek Excel dosyasında kullanıcılar, kurumlar ve denemeler
+r.get('/export/all.xlsx', wrap(async (req, res) => {
+  const users = await query(`SELECT TOP 50000 u.Id, u.Username, u.Email, u.FullName, u.IsAdmin, u.IsDisabled, u.Role, u.ExamTrack, CONVERT(char(10), u.CreatedAt, 23) AS Created, CONVERT(char(10), u.LastLoginAt, 23) AS LastLogin,
+      i.Name AS Inst, c.Name AS ClassName,
+      (SELECT COUNT(*) FROM dbo.TrialExams e WHERE e.UserId=u.Id) AS Exams,
+      (SELECT COALESCE(SUM(s.DurationMinutes),0) FROM dbo.StudySessions s WHERE s.UserId=u.Id) AS Minutes
+    FROM dbo.Users u LEFT JOIN dbo.Institutions i ON i.Id=u.InstitutionId LEFT JOIN dbo.Classes c ON c.Id=u.ClassId ORDER BY u.Id`);
+  const insts = await query(`SELECT i.Name, i.Slug, i.ExamTrack, i.StudentLimit, i.IsActive, CONVERT(char(10), i.CreatedAt, 23) AS Created,
+      (SELECT COUNT(*) FROM dbo.Users u WHERE u.InstitutionId=i.Id AND u.Role='student') AS Students,
+      (SELECT COUNT(*) FROM dbo.Users u WHERE u.InstitutionId=i.Id AND u.Role='teacher') AS Teachers,
+      (SELECT COUNT(*) FROM dbo.Classes c WHERE c.InstitutionId=i.Id) AS Classes FROM dbo.Institutions i ORDER BY i.Name`);
+  const exams = await query(`SELECT TOP 50000 u.Username, i.Name AS Inst, c.Name AS ClassName, e.ExamType, e.ExamPart, e.ExamName, CONVERT(char(10), e.ExamDate, 23) AS ExamDate, e.TotalNet
+    FROM dbo.TrialExams e JOIN dbo.Users u ON u.Id=e.UserId LEFT JOIN dbo.Institutions i ON i.Id=u.InstitutionId LEFT JOIN dbo.Classes c ON c.Id=u.ClassId ORDER BY e.ExamDate DESC, e.Id DESC`);
+  sendXlsx(res, 'auren-tum-veri', [
+    { name: 'Kullanıcılar', widths: [8, 22, 28, 24, 8, 8, 10, 8, 12, 12, 22, 12, 10, 12], rows: [['Id', 'Kullanıcı adı', 'E-posta', 'Ad soyad', 'Yönetici', 'Pasif', 'Rol', 'Sınav', 'Kayıt', 'Son giriş', 'Kurum', 'Sınıf', 'Deneme', 'Çalışma (dk)'],
+      ...users.map(u => [u.Id, u.Username, hiddenMail(u.Email), u.FullName ?? '', u.IsAdmin ? 'Evet' : '', u.IsDisabled ? 'Evet' : '', u.Role ?? 'bireysel', u.ExamTrack ?? '', u.Created, u.LastLogin ?? '', u.Inst ?? '', u.ClassName ?? '', u.Exams, u.Minutes])] },
+    { name: 'Kurumlar', widths: [26, 16, 8, 10, 8, 12, 10, 10, 8], rows: [['Kurum', 'Kısa ad', 'Sınav', 'Kota', 'Aktif', 'Oluşturma', 'Öğrenci', 'Öğretmen', 'Sınıf'],
+      ...insts.map(i => [i.Name, i.Slug, i.ExamTrack, i.StudentLimit ?? '', i.IsActive ? 'Evet' : 'Hayır', i.Created, i.Students, i.Teachers, i.Classes])] },
+    { name: 'Denemeler', widths: [22, 22, 12, 8, 8, 28, 12, 10], rows: [['Kullanıcı adı', 'Kurum', 'Sınıf', 'Sınav', 'Bölüm', 'Deneme', 'Tarih', 'Toplam net'],
+      ...exams.map(e => [e.Username, e.Inst ?? '', e.ClassName ?? '', e.ExamType, e.ExamPart, e.ExamName, e.ExamDate, round2(e.TotalNet)])] },
+  ]);
 }));
 
 export default r;

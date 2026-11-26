@@ -45,6 +45,11 @@ function Overview() {
       <Stat icon={School} label="Sınıf" value={o.classes} />
     </div>
     {o.studentLimit && <Item className="card"><div className="stat-label mb-2">Öğrenci kotası · {o.students}/{o.studentLimit}</div><Bar percent={Math.min(100, o.students / o.studentLimit * 100)} label="Kota doluluğu" /></Item>}
+    <Item className="card flex flex-wrap items-center gap-3">
+      <div className="mr-auto"><p className="font-semibold text-slate-100">Excel&apos;e aktar</p><p className="text-xs text-slate-500">Yetkin olan öğrencilerin verisi; .xlsx olarak iner.</p></div>
+      <a className="btn-ghost" href="/api/kurum/export/students.xlsx" download>Öğrenci listesi</a>
+      <a className="btn-ghost" href="/api/kurum/export/exams.xlsx" download>Deneme sonuçları</a>
+    </Item>
     <Item className="card text-sm text-slate-400">
       <p className="font-semibold text-slate-100">Hızlı başlangıç</p>
       <ol className="mt-2 list-decimal space-y-1 pl-5">

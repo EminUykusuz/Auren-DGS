@@ -31,6 +31,12 @@ Branch: `feature/kurum-paneli` (main'e dokunulmaz, push yok). Her faz ayrı comm
 | 7 | Yanlış defteri | fotoğraflı soru bazlı kayıt (istemcide sıkıştırma, DB'de saklama) | YAPILMADI |
 | 8 | LGS | ayrı net kuralı (3 yanlış 1 doğru), ayrı müfredat/bölümler, `ExamTrack='LGS'` (diğerleriyle karışmaz) | YAPILMADI |
 
+## Ek işler (gece 2)
+- **Landing** yeniden tasarlandı (optik cevap kâğıdı konsepti; Literata kendi sunucumuzdan; görseller `client/public/landing`, krediler altbilgide). Denetçi: 0 hata. Tarayıcıda canlı elle bakılmadı (yalnızca ekran görüntüleri).
+- **Platform sahibi her şeyi görür:** `GET /api/admin/institutions/:id/detail`, `GET /api/admin/users/:id/detail` (salt okunur, kurum süzgeci yok), Admin > Kurumlar satırında "Ayrıntı".
+- **Excel (.xlsx) dışa aktarma** (bağımlılıksız yazıcı `server/src/xlsx.js`): `/api/kurum/export/students.xlsx`, `/api/kurum/export/exams.xlsx` (kapsama göre), `/api/admin/export/all.xlsx`. Gerçek Excel'de açılışı denenmedi (zip/XML geçerliliği ve birim testi var).
+- Bekleyenler: SMTP (hesap bekleniyor), sunucu hatası + deploy (erişim bekleniyor), optik okuyucu (biçim bilgisi bekleniyor), haftalık ödev Excel + gönderim (Faz 6).
+
 ## Excel kolaylaştırma
 - Excel'den hücreleri kopyala → kutuya yapıştır (sekmeyle ayrılmış) ya da `.csv` yükle.
 - Önizleme tablosu: satır satır hata gösterir (eksik ad, tekrar eden numara…), düzeltmeden içeri almaz.
