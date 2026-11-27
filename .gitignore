@@ -10,3 +10,4 @@ dist
 
 # Video/brag çıktıları repoya girmesin
 brag-output/
+tools/blender/out/
