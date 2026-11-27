@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { ZodError } from 'zod';
@@ -18,8 +19,10 @@ export const loginLimiter = [
 // Oturum açmış kullanıcı başına (şifre değiştirme vb.)
 export const userLimiter = rateLimit({ windowMs: 15 * 60_000, limit: Number(process.env.AUTH_RATE_LIMIT) || 10, keyGenerator: (req) => `u${req.userId}`, standardHeaders: true, legacyHeaders: false, message: { error: 'Çok fazla deneme. Lütfen daha sonra tekrar deneyin.' } });
 
-export function setAuthCookie(res, userId) {
-  const token = jwt.sign({ sub: userId }, config.jwtSecret, { expiresIn: config.jwtTtl, algorithm: 'HS256' });
+// Parola özetinin parmak izi: şifre değişince / sıfırlanınca eski oturumlar (çalınmış çerez dahil) kendiliğinden geçersiz olur
+export const pwStamp = (hash) => crypto.createHash('sha256').update(String(hash ?? '')).digest('base64url').slice(0, 16);
+export function setAuthCookie(res, userId, passwordHash) {
+  const token = jwt.sign({ sub: userId, pw: pwStamp(passwordHash) }, config.jwtSecret, { expiresIn: config.jwtTtl, algorithm: 'HS256' });
   res.cookie(config.cookieName, token, { httpOnly: true, secure: config.cookieSecure, sameSite: config.cookieSameSite, maxAge: 7 * 864e5, path: '/' });
 }
 
@@ -27,12 +30,12 @@ export async function requireAuth(req, res, next) {
   try {
     const token = req.cookies?.[config.cookieName];
     if (!token) return res.status(401).json({ error: 'Oturum gerekli' });
-    const { sub } = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
+    const { sub, pw } = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
     // Yetki her istekte veritabanından okunur: askıya alınan / yetkisi alınan kullanıcı anında etkilenir
-    const [u] = await query(`SELECT u.Id, u.IsAdmin, u.IsDisabled, u.ExamMode, u.ExamTrack, u.Role, u.InstitutionId, u.ClassId, u.MustChangePassword, i.IsActive AS InstActive
+    const [u] = await query(`SELECT u.Id, u.PasswordHash, u.IsAdmin, u.IsDisabled, u.ExamMode, u.ExamTrack, u.Role, u.InstitutionId, u.ClassId, u.MustChangePassword, i.IsActive AS InstActive
       FROM dbo.Users u LEFT JOIN dbo.Institutions i ON i.Id = u.InstitutionId WHERE u.Id=@id`, { id: sub });
     // Pasife alınan kurumun tüm kullanıcıları anında oturum dışı kalır
-    if (!u || u.IsDisabled || (u.InstitutionId != null && !u.InstActive)) return res.status(401).json({ error: 'Oturum geçersiz' });
+    if (!u || pw !== pwStamp(u.PasswordHash) || u.IsDisabled || (u.InstitutionId != null && !u.InstActive)) return res.status(401).json({ error: 'Oturum geçersiz' });
     req.userId = u.Id; req.isAdmin = !!u.IsAdmin; req.examMode = u.ExamMode; req.examTrack = u.ExamTrack;
     req.role = u.Role ?? 'student'; req.institutionId = u.InstitutionId ?? null; req.classId = u.ClassId ?? null; req.mustChangePassword = !!u.MustChangePassword;
     // Geçici şifreyle giren kullanıcı şifresini değiştirmeden başka hiçbir şey yapamaz (yalnız /api/auth/*)

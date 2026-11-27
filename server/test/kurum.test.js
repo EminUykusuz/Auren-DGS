@@ -83,12 +83,14 @@ test('toplu ekleme: önizleme + oluşturma + çakışma + giriş + zorunlu şifr
   const dup = await OWN.call('POST', '/kurum/students/bulk', { rows: [{ firstName: 'Can', lastName: 'Er', studentNo: '1', className: 'A' }] });
   assert.equal(dup.json.created.length, 0); assert.equal(dup.json.errors.length, 1);
   // öğrenci geçici şifreyle girer → her şey 403, şifre değiştirince açılır
-  const s = new Client();
+  const s = new Client(), other = new Client();
   const l = await s.call('POST', '/auth/login', { identifier: students[0].username, password: students[0].password });
   assert.equal(l.status, 200); assert.equal(l.json.user.mustChangePassword, true);
+  await other.call('POST', '/auth/login', { identifier: students[0].username, password: students[0].password });   // ikinci cihaz
   assert.equal((await s.call('GET', '/sessions')).status, 403);
   assert.equal((await s.call('POST', '/auth/change-password', { currentPassword: students[0].password, newPassword: 'Yeni12345' })).status, 200);
-  assert.equal((await s.call('GET', '/sessions')).status, 200);
+  assert.equal((await s.call('GET', '/sessions')).status, 200);   // değiştiren oturum açık kalır
+  assert.equal((await other.call('GET', '/auth/me')).status, 401);   // diğer cihazın oturumu düşer
 });
 
 test('IDOR: başka kurum hiçbir şeye erişemez', async () => {

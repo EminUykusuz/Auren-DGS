@@ -116,7 +116,8 @@ test('şifre sıfırlama: hashli, tek kullanımlık, süreli, enumeration yok', 
   await query(`INSERT INTO dbo.PasswordResets (UserId,TokenHash,ExpiresAt) VALUES (@id,@th,DATEADD(minute,15,SYSUTCDATETIME()))`, { id: u.Id, th: sha(tok) });
   assert.equal((await new Client().call('POST', '/auth/reset-password', { token: tok, password: 'Yeni12345' })).status, 200);
   assert.equal((await new Client().call('POST', '/auth/reset-password', { token: tok, password: 'Baska12345' })).status, 400);
-  assert.equal((await new Client().call('POST', '/auth/login', { identifier: ub.email, password: 'Yeni12345' })).status, 200);
+  assert.equal((await B.call('GET', '/auth/me')).status, 401);   // şifre sıfırlanınca eski oturum düşer
+  assert.equal((await B.call('POST', '/auth/login', { identifier: ub.email, password: 'Yeni12345' })).status, 200);
   const tok2 = crypto.randomBytes(32).toString('base64url');
   await query(`INSERT INTO dbo.PasswordResets (UserId,TokenHash,ExpiresAt) VALUES (@id,@th,DATEADD(minute,-1,SYSUTCDATETIME()))`, { id: u.Id, th: sha(tok2) });
   assert.equal((await new Client().call('POST', '/auth/reset-password', { token: tok2, password: 'Yeni12345' })).status, 400);

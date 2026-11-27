@@ -31,7 +31,7 @@ r.post('/register', authLimiter, validate(z.object({ username, email, password, 
   const h = await bcrypt.hash(p, config.bcryptRounds);
   try {
     const [row] = await query(`INSERT INTO dbo.Users (Username, Email, PasswordHash, ExamMode, ExamTrack) OUTPUT INSERTED.Id VALUES (@u,@e,@h,@x,@t)`, { u, e, h, x, t });
-    setAuthCookie(res, row.Id);
+    setAuthCookie(res, row.Id, h);
     res.status(201).json({ user: { id: row.Id, username: u, email: e, examMode: x, examTrack: t } });
   } catch (err) {
     if (err.number === 2627 || err.number === 2601) return res.status(409).json({ error: 'Kullanıcı adı veya e-posta kullanımda' });
@@ -45,7 +45,7 @@ r.post('/login', ...loginLimiter, validate(z.object({ identifier: z.string().tri
   const ok = await bcrypt.compare(p, u?.PasswordHash ?? DUMMY_HASH);
   if (!u || !ok || u.IsDisabled || (u.InstitutionId != null && !u.InstActive)) return res.status(401).json({ error: 'Kullanıcı adı/e-posta veya şifre hatalı' });
   await query(`UPDATE dbo.Users SET LastLoginAt=SYSUTCDATETIME() WHERE Id=@id`, { id: u.Id });
-  setAuthCookie(res, u.Id);
+  setAuthCookie(res, u.Id, u.PasswordHash);
   res.json({ user: pub(u) });
 }));
 
@@ -64,6 +64,7 @@ r.post('/change-password', requireAuth, userLimiter, validate(z.object({ current
   if (req.body.currentPassword === req.body.newPassword) return res.status(400).json({ error: 'Yeni şifre eskisinden farklı olmalı' });
   const h = await bcrypt.hash(req.body.newPassword, config.bcryptRounds);
   await query(`UPDATE dbo.Users SET PasswordHash=@h, MustChangePassword=0 WHERE Id=@id`, { h, id: req.userId });
+  setAuthCookie(res, req.userId, h);   // bu oturum açık kalır, diğerleri düşer
   res.json({ ok: true });
 }));
 
