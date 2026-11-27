@@ -95,7 +95,7 @@ export default function Exams() {
   const multi = cfg.parts.length > 1;
   const cols = useMemo(() => [
     { key: 'ExamDate', label: 'Tarih', firstDir: -1, className: 'num whitespace-nowrap' },
-    { key: 'ExamName', label: 'Deneme', render: r => <span className="text-slate-100">{r.ExamName}{multi && <span className="badge ml-2 bg-white/[0.07] text-slate-300">{r.ExamPart}</span>}</span> },
+    { key: 'ExamName', label: 'Deneme', render: r => <span className="text-slate-100">{r.ExamName}{r.Institutional && <span className="badge ml-2 bg-accent/15 text-accent">Kurum</span>}{multi && <span className="badge ml-2 bg-white/[0.07] text-slate-300">{r.ExamPart}</span>}</span> },
     { key: 'sections', label: 'Bölümler', sort: false, render: r => (
       <span className="flex flex-wrap gap-x-3 gap-y-0.5">{r.Sections.map(s => <span key={s.key} className="whitespace-nowrap text-xs text-slate-400">{subjectLabel(s.key)} <span className="num text-slate-100">{fmt(s.net)}</span> <span className="text-slate-600">({s.correct}/{s.wrong})</span></span>)}</span>) },
     { key: 'TotalNet', label: 'Toplam', align: 'right', firstDir: -1, render: r => <span className="text-base font-semibold text-accent">{fmt(r.TotalNet)}</span> },
@@ -106,7 +106,7 @@ export default function Exams() {
         <button className="btn-ghost !px-3 !py-1 text-xs" onClick={() => setReview(r)} aria-label={`${r.ExamName} hata nedenlerini incele`}>
           <ListChecks size={13} />{done ? <>{REASON_LABEL[top[0]]} <span className="num text-slate-400">{done}/{wrong}</span></> : 'Nedenleri gir'}</button>);
     } },
-    { key: 'del', label: '', sort: false, align: 'right', render: r => <button aria-label={`${r.ExamName} sil`} className="text-slate-500 transition hover:text-red-300" onClick={() => confirm('Bu deneme silinsin mi?') && del('/exams/' + r.Id + q()).then(load)}><Trash2 size={14} /></button> },
+    { key: 'del', label: '', sort: false, align: 'right', render: r => r.Institutional ? null : <button aria-label={`${r.ExamName} sil`} className="text-slate-500 transition hover:text-red-300" onClick={() => confirm('Bu deneme silinsin mi?') && del('/exams/' + r.Id + q()).then(load)}><Trash2 size={14} /></button> },
   ], [mode]); // eslint-disable-line
 
   // Net karşılaştırması yalnızca aynı bölüm (TYT/AYT) içinde anlamlı

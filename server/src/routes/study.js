@@ -99,13 +99,13 @@ const examSchema = z.object({
 const fail = (res, path, message) => res.status(400).json({ error: 'Geçersiz veri', details: [{ path, message }] });
 
 r.get('/exams', wrap(async (req, res) => {
-  const rows = await query(`SELECT Id, ExamName, ExamType, ExamPart, TotalNet, CONVERT(char(10),ExamDate,23) AS ExamDate
+  const rows = await query(`SELECT Id, ExamName, ExamType, ExamPart, TotalNet, CONVERT(char(10),ExamDate,23) AS ExamDate, InstExamId
     FROM dbo.TrialExams WHERE UserId=@me AND ExamType=@x ORDER BY ExamDate DESC, Id DESC`, { me: req.userId, x: req.examType });
   const secs = await query(`SELECT s.ExamId, s.SectionKey, s.Correct, s.Wrong, s.Net FROM dbo.TrialExamSections s JOIN dbo.TrialExams t ON t.Id=s.ExamId WHERE t.UserId=@me AND t.ExamType=@x`, { me: req.userId, x: req.examType });
   const errs = await query(`SELECT e.ExamId, e.Subject, e.Reason, e.Cnt FROM dbo.TrialExamErrors e JOIN dbo.TrialExams t ON t.Id=e.ExamId WHERE t.UserId=@me AND t.ExamType=@x`, { me: req.userId, x: req.examType });
   res.json({ examType: req.examType, exams: rows.map(x => {
     const order = partOf(x.ExamType, x.ExamPart)?.sections.map(s => s.key) ?? [];
-    return { Id: x.Id, ExamName: x.ExamName, ExamType: x.ExamType, ExamPart: x.ExamPart, ExamDate: x.ExamDate, TotalNet: Number(x.TotalNet),
+    return { Id: x.Id, ExamName: x.ExamName, ExamType: x.ExamType, ExamPart: x.ExamPart, ExamDate: x.ExamDate, TotalNet: Number(x.TotalNet), Institutional: x.InstExamId != null,
       Sections: secs.filter(s => s.ExamId === x.Id).map(s => ({ key: s.SectionKey, correct: s.Correct, wrong: s.Wrong, net: Number(s.Net) }))
         .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key)),
       Errors: errs.filter(e => e.ExamId === x.Id).map(e => ({ subject: e.Subject, reason: e.Reason, count: e.Cnt })) };
@@ -162,8 +162,9 @@ r.post('/exams', validate(examSchema), wrap(async (req, res) => {
 }));
 
 r.delete('/exams/:id', validate(idParam, 'params'), wrap(async (req, res) => {
-  const out = await query(`DELETE FROM dbo.TrialExams OUTPUT DELETED.Id WHERE Id=@id AND UserId=@me`, { id: req.params.id, me: req.userId });
-  if (!out.length) return res.status(404).json({ error: 'Bulunamadı' });
+  // Kurum denemesini öğrenci silemez (sonucu kurumun kaydıdır)
+  const out = await query(`DELETE FROM dbo.TrialExams OUTPUT DELETED.Id WHERE Id=@id AND UserId=@me AND InstExamId IS NULL`, { id: req.params.id, me: req.userId });
+  if (!out.length) return res.status(404).json({ error: 'Bulunamadı ya da kurum denemesi (silinemez)' });
   res.json({ ok: true });
 }));
 

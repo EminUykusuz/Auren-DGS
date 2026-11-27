@@ -126,3 +126,28 @@ export function netDrop(nets) {
   if (avg <= 0 || drop < 3 || drop / avg < 0.15) return null;
   return { last: Math.round(nets[0] * 100) / 100, avg: Math.round(avg * 100) / 100, drop: Math.round(drop * 100) / 100 };
 }
+
+// Kurum denemesi sonuçları: her satır "öğrenciNo  D Y  D Y …" (bölüm sırasıyla doğru/yanlış çiftleri).
+// Ayraç: sekme (Excel'den yapıştırma), noktalı virgül, virgül ya da boşluk. İlk satır başlıksa (sayı olmayan sütunlar) atlanır.
+export function parseExamResults(text, sections) {
+  const rows = [], errors = [], seen = new Set();
+  let first = true;
+  String(text ?? '').split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim(); if (!line) return;
+    const tok = line.split(/[\t;, ]+/).filter(Boolean), nums = tok.slice(1), no = tok[0];
+    const isFirst = first; first = false;
+    if (!nums.every(t => /^\d+$/.test(t))) { if (isFirst) return; errors.push({ line: i + 1, message: 'Sayı olmayan değer var' }); return; }
+    if (no.length > 30) { errors.push({ line: i + 1, message: 'Öğrenci numarası çok uzun' }); return; }
+    if (nums.length !== sections.length * 2) { errors.push({ line: i + 1, message: `${sections.length * 2} sayı (her ders için doğru ve yanlış) bekleniyordu, ${nums.length} bulundu` }); return; }
+    if (seen.has(no)) { errors.push({ line: i + 1, message: `${no} numarası bu listede iki kez geçiyor` }); return; }
+    const results = {}; let bad = null;
+    sections.forEach((s, k) => {
+      const c = Number(nums[2 * k]), w = Number(nums[2 * k + 1]);
+      if (c + w > s.max) bad ??= `${s.label}: doğru + yanlış en fazla ${s.max}`;
+      results[s.key] = { correct: c, wrong: w };
+    });
+    if (bad) { errors.push({ line: i + 1, message: bad }); return; }
+    seen.add(no); rows.push({ line: i + 1, studentNo: no, results });
+  });
+  return { rows, errors };
+}

@@ -26,9 +26,9 @@ Branch: `feature/kurum-paneli` (main'e dokunulmaz, push yok). Her faz ayrı comm
 | 2 | Kurum + marka | admin: kurum oluştur; `/k/:slug` markalı giriş; logo yükle/servis; öğrenci uygulamasında logo | YAZILDI (DB'de denenmedi) |
 | 3 | Sınıf + öğrenci | sınıf CRUD, tek tek ve **toplu (Excel yapıştır / CSV) öğrenci ekleme**, giriş bilgisi çıktısı (CSV), şifre sıfırlama, öğretmen hesapları | YAZILDI (DB'de denenmedi) |
 | 4 | Sınıf değiştirme | tekli/toplu taşıma, geçmiş (ClassTransfers), sıralamaya göre öneri ("ilk N → A sınıfı") | YAZILDI (DB'de denenmedi) |
-| 5 | Kurum denemeleri | öğretmen deneme tanımlar, sonuçları toplu yapıştırır → öğrencilerin Denemeler sayfasına düşer; sınıf sıralaması | YAPILMADI |
+| 5 | Kurum denemeleri | öğretmen deneme tanımlar, sonuçları toplu yapıştırır → öğrencilerin Denemeler sayfasına düşer; sınıf sıralaması | YAZILDI, testli (migration 014, routes/kurumExams.js, Kurum → Denemeler sekmesi; sonuçlar öğrencinin Denemeler listesinde "Kurum" etiketiyle, öğrenci silemez) |
 | 6 | Haftalık ödev | sınıfa ödev (konu, soru hedefi, bitiş), öğrenci işaretler, öğretmen takip eder | YAZILDI, DB üzerinde denenmedi (migration 011, `routes/odev.js`, Kurum → Ödev sekmesi, öğrenci → Ödevler; Excel kâğıdı/sonuç + xlsx/pdf ek) |
-| 7 | Yanlış defteri | fotoğraflı soru bazlı kayıt (istemcide sıkıştırma, DB'de saklama) | YAPILMADI |
+| 7 | Yanlış defteri | fotoğraflı soru bazlı kayıt (istemcide sıkıştırma, DB'de saklama) | YAZILDI, testli (migration 015, routes/defter.js, öğrenci → Yanlış defteri; fotoğraf istemcide ≤300 KB JPEG, yalnız sahibine servis) |
 | 8 | LGS | ayrı net kuralı (3 yanlış 1 doğru), ayrı müfredat/bölümler, `ExamTrack='LGS'` (diğerleriyle karışmaz) | YAZILDI, DB üzerinde denenmedi (migration 010; 90 soru, 6 ders, 3:1 net) |
 
 ## Ek işler (gece 2)

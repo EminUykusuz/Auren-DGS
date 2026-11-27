@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { NavLink, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound, ClipboardList, Megaphone, TriangleAlert, CircleHelp } from 'lucide-react';
+import { Users, GraduationCap, School, History as HistoryIcon, Palette, ArrowRightLeft, Loader2, Plus, Archive, ArchiveRestore, Check, ImagePlus, Trash2, UserCheck, KeyRound, ClipboardList, FileCheck2, Megaphone, TriangleAlert, CircleHelp } from 'lucide-react';
 import clsx from 'clsx';
 import { get, post, put, del, api } from '../lib/api.js';
 import { useAuth } from '../store.js';
@@ -15,6 +15,7 @@ const Placement = lazy(() => import('./KurumPlacement.jsx'));
 const Teachers = lazy(() => import('./KurumTeachers.jsx'));
 const Odev = lazy(() => import('./KurumOdev.jsx'));
 const Duyuru = lazy(() => import('./KurumDuyuru.jsx'));
+const Deneme = lazy(() => import('./KurumDeneme.jsx'));
 const Yardim = lazy(() => import('./KurumYardim.jsx'));
 
 const Err = ({ children }) => children ? <p role="alert" className="rounded-2xl bg-red-500/10 px-3.5 py-2.5 text-xs text-red-300">{children}</p> : null;
@@ -24,7 +25,7 @@ function Tabs({ owner }) {
   const [reqs, setReqs] = useState(0);   // yanıt bekleyen teslim tarihi talepleri
   usePoll(() => { get('/odev/requests-count').then(r => setReqs(r.open)).catch(() => {}); }, 60000);
   const tabs = [['/kurum', 'Genel', Users, true], ['/kurum/ogrenciler', 'Öğrenciler', GraduationCap], ['/kurum/siniflar', 'Sınıflar', School],
-    ['/kurum/odev', 'Ödev', ClipboardList], ['/kurum/duyuru', 'Duyuru', Megaphone], ['/kurum/yerlestirme', 'Sınıf değiştirme', ArrowRightLeft], ...(owner ? [['/kurum/ogretmenler', 'Öğretmenler', UserCheck]] : []),
+    ['/kurum/denemeler', 'Denemeler', FileCheck2], ['/kurum/odev', 'Ödev', ClipboardList], ['/kurum/duyuru', 'Duyuru', Megaphone], ['/kurum/yerlestirme', 'Sınıf değiştirme', ArrowRightLeft], ...(owner ? [['/kurum/ogretmenler', 'Öğretmenler', UserCheck]] : []),
     ['/kurum/gecmis', 'Geçmiş', HistoryIcon], ...(owner ? [['/kurum/marka', 'Marka', Palette]] : []), ['/kurum/yardim', 'Nasıl kullanılır', CircleHelp]];
   return (
     <Item className="glass-pill mx-auto flex w-fit max-w-full gap-1 overflow-x-auto p-1">
@@ -227,6 +228,7 @@ export default function Kurum() {
           <Route index element={<Overview />} />
           <Route path="ogrenciler" element={<Students />} />
           <Route path="siniflar" element={<Classes />} />
+          <Route path="denemeler" element={<Deneme />} />
           <Route path="odev" element={<Odev />} />
           <Route path="duyuru" element={<Duyuru />} />
           <Route path="yerlestirme" element={<Placement />} />

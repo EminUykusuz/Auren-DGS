@@ -454,3 +454,5 @@ r.get('/export/exams.xlsx', ...requireStaff, wrap(async (req, res) => {
 }));
 
 export default r;
+
+export { scopeSql, scopeParams, classIsMine };

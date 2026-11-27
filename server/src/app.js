@@ -18,6 +18,8 @@ import profile from './routes/profile.js';
 import kurum from './routes/kurum.js';
 import odev from './routes/odev.js';
 import duyuru from './routes/duyuru.js';
+import kurumExams from './routes/kurumExams.js';
+import defter from './routes/defter.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -40,6 +42,8 @@ app.use(cors((req, cb) => cb(null, { origin: !req.headers.origin || sameOrigin(r
 // Kurum içe aktarma (yüzlerce öğrenci) ve toplu kişisel ödev (≤200 öğrenci × ≤60 madde) için daha büyük gövde; yalnızca bu yollarda. Genel ayrıştırıcı zaten ayrışmış gövdeyi atlar.
 app.use('/api/kurum', express.json({ limit: '256kb' }));
 app.use('/api/odev', express.json({ limit: '1mb' }));
+// Yanlış defteri: küçültülmüş soru fotoğrafı base64 olarak gelir (en çok 350 KB → ~470 KB)
+app.use('/api/defter', express.json({ limit: '700kb' }));
 app.use(express.json({ limit: '20kb' }));
 app.use(cookieParser());
 // İndekslenecek herkese açık sayfalar (client/public/sitemap.xml ile aynı). Diğer her yol (API, panel, giriş, kayıt, bilinmeyen) noindex:
@@ -63,9 +67,11 @@ app.use('/api', study);
 app.use('/api', social);
 app.use('/api', profile);
 app.use('/api/admin', admin);
+app.use('/api/kurum/exams', kurumExams);
 app.use('/api/kurum', kurum);
 app.use('/api/odev', odev);
 app.use('/api/duyuru', duyuru);
+app.use('/api/defter', defter);
 
 // Derlenmiş istemci (client/dist) varsa aynı portta sun: sıkıştırma + uzun süreli önbellek
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');

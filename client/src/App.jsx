@@ -12,6 +12,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Study = lazy(() => import('./pages/Study.jsx'));
 const Timer = lazy(() => import('./pages/Timer.jsx'));
 const Exams = lazy(() => import('./pages/Exams.jsx'));
+const Defter = lazy(() => import('./pages/Defter.jsx'));
 const Curriculum = lazy(() => import('./pages/Curriculum.jsx'));
 const Friends = lazy(() => import('./pages/Friends.jsx'));
 const Battle = lazy(() => import('./pages/Battle.jsx'));
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/calisma" element={<Study />} />
         <Route path="/kronometre" element={<Timer />} />
         <Route path="/denemeler" element={<Exams />} />
+        <Route path="/defter" element={<Defter />} />
         <Route path="/mufredat" element={<Curriculum />} />
         <Route path="/arkadaslar" element={<Friends />} />
         {user.institution && <Route path="/odev" element={<Odev />} />}
