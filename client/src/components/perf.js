@@ -4,15 +4,15 @@
 /** Başlangıç kalitesi. low: telefon/az bellek/veri tasarrufu, mid: orta, high: masaüstü */
 export function tier() {
   const nav = navigator, mem = nav.deviceMemory || 8, cores = nav.hardwareConcurrency || 8;
-  const coarse = matchMedia('(pointer: coarse)').matches, saver = nav.connection?.saveData === true;
+  const saver = nav.connection?.saveData === true;
   if (saver || mem <= 2 || cores <= 2) return 'low';
-  if (coarse || mem <= 4 || cores <= 4 || Math.min(screen.width, screen.height) < 600) return 'mid';
+  if (mem <= 4 || cores <= 4) return 'mid';
   return 'high';
 }
 
 const CFG = {
   low: { dpr: 1, shadow: 0, map: 512 },
-  mid: { dpr: 1.5, shadow: 1, map: 1024 },
+  mid: { dpr: 2, shadow: 1, map: 2048 },
   high: { dpr: 2, shadow: 1, map: 2048 },
 };
 
