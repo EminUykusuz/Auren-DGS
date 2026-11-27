@@ -16,6 +16,8 @@ export async function getPool(database = config.db.database) {
       pool: { max: 10 },
     });
   }
+  // Boşta bağlantı kopması (SQL Server yeniden başlar, ağ kesilir) havuzda 'error' olayı üretir; dinleyici yoksa Node süreci çöker.
+  p.on('error', e => console.error('[db] havuz hatası:', e?.message || e));
   await p.connect();
   if (database === config.db.database) pool = p;
   return p;

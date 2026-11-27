@@ -25,10 +25,11 @@ app.set('trust proxy', 1);
 app.use(compression());
 // Avatarlar api.dicebear.com'dan SVG olarak yüklenir; diğer varsayılanlar korunur
 app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), 'img-src': ["'self'", 'data:', 'https://api.dicebear.com'] } } }));
-app.use(cors({
-  origin: (o, cb) => (!o || config.origins.includes(o)) ? cb(null, true) : cb(new Error('CORS')),
-  credentials: true,
-}));
+// Aynı kaynaktan (Origin host'u = istek Host'u) ya da CORS_ORIGINS listesinden gelen istekler geçer. Listede olmayan kaynağa hata FIRLATILMAZ:
+// tarayıcı <script type="module"> isteğine Origin ekler; www./IP/eski alan adıyla açılan sitede varlıklar 500 verip sayfa tamamen boş kalıyordu.
+// Başka kaynaktan çağrıda yalnızca CORS başlıkları verilmez (tarayıcı yanıtı okutmaz); durum değiştirenleri originGuard 403 ile reddeder.
+export const sameOrigin = (req) => { const o = req.headers.origin; if (!o) return false; try { return new URL(o).host === req.headers.host; } catch { return false; } };
+app.use(cors((req, cb) => cb(null, { origin: !req.headers.origin || sameOrigin(req) || config.origins.includes(req.headers.origin), credentials: true })));
 // Kurum içe aktarma (yüzlerce öğrenci) ve toplu kişisel ödev (≤200 öğrenci × ≤60 madde) için daha büyük gövde; yalnızca bu yollarda. Genel ayrıştırıcı zaten ayrışmış gövdeyi atlar.
 app.use('/api/kurum', express.json({ limit: '256kb' }));
 app.use('/api/odev', express.json({ limit: '1mb' }));
@@ -78,6 +79,9 @@ if (fs.existsSync(path.join(dist, 'index.html'))) {
       res.setHeader('Cache-Control', file.includes(`${path.sep}assets${path.sep}`) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
     },
   }));
+  // Olmayan dosya (yeni yayından sonra silinen eski hash'li /assets/*.js vb.) index.html OLARAK dönmesin: tarayıcı "geçersiz MIME" hatasıyla çöker.
+  // Gerçek 404 dönünce istemci bunu algılayıp sayfayı yeniler (main.jsx → vite:preloadError).
+  app.get(/^\/(assets\/.*|.*\.(js|mjs|css|map|png|jpe?g|svg|webp|ico|woff2?|json|txt|xml))$/i, (req, res) => res.status(404).type('text/plain').set('Cache-Control', 'no-store').send('Bulunamadı'));
   app.get(/^\/(?!api\/).*/, (req, res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(dist, 'index.html')); });
 }
 

@@ -14,7 +14,7 @@ const clock = ms => { const s = Math.floor(ms / 1000); return `${pad(Math.floor(
 
 // Zaman duvar saatine göre hesaplanır (sekme arka planda olsa da, sayfa yenilense de doğru kalır)
 function Stopwatch() {
-  const saved = useRef(JSON.parse(localStorage.getItem(KEY) || 'null'));
+  const saved = useRef((() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } })());   // bozuk kayıt sayfayı çökertmesin
   const [acc, setAcc] = useState(saved.current?.acc ?? 0);            // birikmiş ms
   const [since, setSince] = useState(saved.current?.since ?? null);   // çalışıyorsa başlangıç zamanı
   const [now, setNow] = useState(Date.now());

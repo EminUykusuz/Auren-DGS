@@ -59,7 +59,9 @@ export async function assignedClassIds(userId) {
 export function originGuard(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const o = req.headers.origin;
-  if (o && !config.origins.includes(o)) return res.status(403).json({ error: 'Yasak' });
+  // Aynı kaynak (Origin host'u = Host) güvenlidir: saldırgan sitenin Origin'i bizim Host'umuzla eşleşemez
+  let same = false; try { same = !!o && new URL(o).host === req.headers.host; } catch { /* geçersiz Origin → reddedilir */ }
+  if (o && !same && !config.origins.includes(o)) return res.status(403).json({ error: 'Yasak' });
   next();
 }
 

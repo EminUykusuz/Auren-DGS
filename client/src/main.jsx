@@ -20,4 +20,12 @@ function Root() {
 // Giriş yapmış kullanıcıda bu anahtar vardır; onlar için 50 KB'lık Landing indirilmez.
 if (location.pathname === '/' && !localStorage.getItem('auren_mode')) import('./pages/Landing.jsx');
 
+// Yeni sürüm yayınlanınca eski hash'li parçalar sunucudan kalkar; açık sekmede sayfa geçişi parça indiremez.
+// Bir kez yenile (sonsuz döngü olmasın diye 30 sn içinde ikinci kez yenilenmez).
+window.addEventListener('vite:preloadError', (e) => {
+  e.preventDefault();
+  const last = Number(sessionStorage.getItem('auren_reload') || 0);
+  if (Date.now() - last > 30_000) { sessionStorage.setItem('auren_reload', String(Date.now())); location.reload(); }
+});
+
 createRoot(document.getElementById('root')).render(<Root />);

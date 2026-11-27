@@ -4,7 +4,14 @@ import { Component } from 'react';
 export default class ErrorBoundary extends Component {
   state = { error: null };
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error('[ErrorBoundary]', error, info?.componentStack); }
+  componentDidCatch(error, info) {
+    console.error('[ErrorBoundary]', error, info?.componentStack);
+    // Yeni yayından sonra eski sayfa parçası indirilemediyse (lazy import) bir kez yenile
+    if (/dynamically imported module|Importing a module script failed|Loading chunk|error loading dynamically/i.test(String(error?.message))) {
+      const last = Number(sessionStorage.getItem('auren_reload') || 0);
+      if (Date.now() - last > 30_000) { sessionStorage.setItem('auren_reload', String(Date.now())); location.reload(); }
+    }
+  }
   render() {
     if (!this.state.error) return this.props.children;
     return (
