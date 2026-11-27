@@ -23,8 +23,15 @@ export const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(compression());
-// Avatarlar api.dicebear.com'dan SVG olarak yüklenir; diğer varsayılanlar korunur
-app.use(helmet({ contentSecurityPolicy: { directives: { ...helmet.contentSecurityPolicy.getDefaultDirectives(), 'img-src': ["'self'", 'data:', 'https://api.dicebear.com'] } } }));
+// Avatarlar api.dicebear.com'dan SVG olarak yüklenir; diğer varsayılanlar korunur.
+// 3B sahneler: meshopt çözücüsü WebAssembly kullanır ('wasm-unsafe-eval' yalnızca WASM derlemeye izin verir, eval()'i açmaz);
+// GLB içindeki dokular blob: adresiyle çözülür (img-src/connect-src).
+app.use(helmet({ contentSecurityPolicy: { directives: {
+  ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+  'script-src': ["'self'", "'wasm-unsafe-eval'"],
+  'img-src': ["'self'", 'data:', 'blob:', 'https://api.dicebear.com'],
+  'connect-src': ["'self'", 'blob:'],
+} } }));
 // Aynı kaynaktan (Origin host'u = istek Host'u) ya da CORS_ORIGINS listesinden gelen istekler geçer. Listede olmayan kaynağa hata FIRLATILMAZ:
 // tarayıcı <script type="module"> isteğine Origin ekler; www./IP/eski alan adıyla açılan sitede varlıklar 500 verip sayfa tamamen boş kalıyordu.
 // Başka kaynaktan çağrıda yalnızca CORS başlıkları verilmez (tarayıcı yanıtı okutmaz); durum değiştirenleri originGuard 403 ile reddeder.
