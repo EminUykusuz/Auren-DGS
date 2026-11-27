@@ -4,6 +4,8 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Flame, Target, Trophy, GraduationCap, ArrowRight } from 'lucide-react';
 import Logo from '../components/Logo.jsx';
+import Scene3D from '../components/Scene3D.jsx';
+import Story from '../components/Story.jsx';
 import JsonLd from '../components/JsonLd.jsx';
 import LegalLinks from '../components/LegalLinks.jsx';
 import { SITE, DEFAULT_DESC } from '../hooks/useSEO.js';
@@ -455,10 +457,14 @@ export default function Landing() {
                 <a href="#hesapla" className="btn-ghost !px-5 !py-3 !text-[15px]">Netini hesapla</a>
               </div>
             </div>
-            <Mock />
+            <div className="relative">
+              <Scene3D className="relative z-20 mx-auto mb-4 h-[270px] w-full max-w-[380px] lg:-mb-16 lg:ml-[-8rem] lg:h-[450px] lg:w-[calc(100%+8rem)] lg:max-w-none" />
+              <Mock />
+            </div>
           </div>
         </section>
 
+        <Story />
         <Calc />
         <Features />
         <How />
