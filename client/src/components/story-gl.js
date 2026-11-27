@@ -26,20 +26,20 @@ const easeOutBack = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * (x
 /* ---- Sayfa dokuları (768×1024; üst = masanın uzak ucu). Hepsi YALNIZ BİR KEZ çizilir; yazı animasyonunda sadece hazır katman kopyalanır ---- */
 const PW = 768, PH = 1024, PAGE_BG = '#f6f0e2', INK = '#1d2a2e', ACC = '#0f9d74';
 function pageBase(g) { g.fillStyle = PAGE_BG; g.fillRect(0, 0, PW, PH); for (let i = 0; i < 2500; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.03})`; g.fillRect(Math.random() * PW, Math.random() * PH, 2, 2); } }
-function bars(g, x, y, w, items, color) { items.forEach(([name, v, max], i) => { const yy = y + i * 92; g.fillStyle = INK; g.font = `600 30px ${FONT}`; g.textAlign = 'left'; g.fillText(name, x, yy); g.fillStyle = 'rgba(0,0,0,.09)'; g.fillRect(x, yy + 18, w, 22); g.fillStyle = color; g.fillRect(x, yy + 18, w * (v / max), 22); g.fillStyle = INK; g.textAlign = 'right'; g.fillText(String(v) + (max === 100 ? '%' : ''), x + w, yy); }); }
+function bars(g, x, y, w, items, color) { items.forEach(([name, v, max], i) => { const yy = y + i * 108; g.fillStyle = INK; g.font = `600 40px ${FONT}`; g.textAlign = 'left'; g.fillText(name, x, yy); g.fillStyle = 'rgba(0,0,0,.09)'; g.fillRect(x, yy + 20, w, 28); g.fillStyle = color; g.fillRect(x, yy + 20, w * (v / max), 28); g.fillStyle = INK; g.textAlign = 'right'; g.fillText(String(v) + (max === 100 ? '%' : ''), x + w, yy); }); }
 const folio = (g, n, right) => { g.fillStyle = 'rgba(0,0,0,.35)'; g.font = `600 26px ${FONT}`; g.textAlign = right ? 'right' : 'left'; g.fillText(String(n), right ? 704 : 64, 972); };
 
 const TYPED = 'Matematikte 6 yanlışın 4’ü dikkatsizlik. Bu hafta işlem hatalarına odaklan; iki gün sonra konu tekrarın hazır.';
 function drawTypedBase(g) {
   pageBase(g);
-  g.fillStyle = ACC; g.font = `800 40px ${FONT}`; g.textAlign = 'left'; g.fillText('TYT · DENEME 4', 64, 110);
-  g.fillStyle = INK; g.font = `800 150px ${FONT}`; g.fillText('62,5', 58, 290); g.font = `600 34px ${FONT}`; g.globalAlpha = 0.6; g.fillText('net', 64, 340); g.globalAlpha = 1;
+  g.fillStyle = ACC; g.font = `800 48px ${FONT}`; g.textAlign = 'left'; g.fillText('TYT · DENEME 4', 64, 115);
+  g.fillStyle = INK; g.font = `800 190px ${FONT}`; g.fillText('62,5', 58, 320); g.font = `600 44px ${FONT}`; g.globalAlpha = 0.6; g.fillText('net', 64, 380); g.globalAlpha = 1;
   folio(g, 1, true);
 }
-function wrapLines(g, text, maxW) { g.font = `500 36px ${FONT}`; const out = []; let line = ''; for (const w of text.split(' ')) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
-const pageReasons = (g) => { pageBase(g); g.fillStyle = INK; g.font = `800 52px ${FONT}`; g.textAlign = 'left'; g.fillText('Yanlışların', 64, 120); g.font = `500 30px ${FONT}`; g.globalAlpha = 0.65; g.fillText('nedenlerine göre', 64, 168); g.globalAlpha = 1; bars(g, 64, 290, 640, [['Bilgi eksiği', 9, 12], ['Dikkatsizlik', 6, 12], ['Süre yetmedi', 3, 12]], '#d9534f'); folio(g, 2, false); };
-const pageStrength = (g) => { pageBase(g); g.fillStyle = INK; g.font = `800 52px ${FONT}`; g.textAlign = 'left'; g.fillText('Konu gücü', 64, 120); g.font = `500 30px ${FONT}`; g.globalAlpha = 0.65; g.fillText('aralıklı tekrarla', 64, 168); g.globalAlpha = 1; bars(g, 64, 290, 640, [['Matematik', 72, 100], ['Türkçe', 58, 100], ['Fen Bilimleri', 41, 100]], ACC); folio(g, 3, true); };
-const pagePlan = (g) => { pageBase(g); g.fillStyle = INK; g.font = `800 52px ${FONT}`; g.textAlign = 'left'; g.fillText('Bu hafta', 64, 120); g.fillStyle = ACC; g.font = `800 180px ${FONT}`; g.fillText('63', 58, 330); g.fillStyle = INK; g.font = `500 36px ${FONT}`; g.fillText('soru hedefi', 64, 390); g.fillText('Pzt · Çar · Cum', 64, 470); g.globalAlpha = 0.6; g.fillText('Matematik tekrarı', 64, 520); g.globalAlpha = 1; folio(g, 4, false); };
+function wrapLines(g, text, maxW) { g.font = `500 46px ${FONT}`; const out = []; let line = ''; for (const w of text.split(' ')) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
+const pageReasons = (g) => { pageBase(g); g.fillStyle = INK; g.font = `800 62px ${FONT}`; g.textAlign = 'left'; g.fillText('Yanlışların', 64, 120); g.font = `500 38px ${FONT}`; g.globalAlpha = 0.65; g.fillText('nedenlerine göre', 64, 178); g.globalAlpha = 1; bars(g, 64, 320, 640, [['Bilgi eksiği', 9, 12], ['Dikkatsizlik', 6, 12], ['Süre yetmedi', 3, 12]], '#d9534f'); folio(g, 2, false); };
+const pageStrength = (g) => { pageBase(g); g.fillStyle = INK; g.font = `800 62px ${FONT}`; g.textAlign = 'left'; g.fillText('Konu gücü', 64, 120); g.font = `500 38px ${FONT}`; g.globalAlpha = 0.65; g.fillText('aralıklı tekrarla', 64, 178); g.globalAlpha = 1; bars(g, 64, 320, 640, [['Matematik', 72, 100], ['Türkçe', 58, 100], ['Fen Bilimleri', 41, 100]], ACC); folio(g, 3, true); };
+const pagePlan = (g) => { pageBase(g); g.fillStyle = INK; g.font = `800 62px ${FONT}`; g.textAlign = 'left'; g.fillText('Bu hafta', 64, 120); g.fillStyle = ACC; g.font = `800 180px ${FONT}`; g.fillText('63', 58, 330); g.fillStyle = INK; g.font = `500 46px ${FONT}`; g.fillText('soru hedefi', 64, 405); g.fillText('Pzt · Çar · Cum', 64, 500); g.globalAlpha = 0.6; g.fillText('Matematik tekrarı', 64, 565); g.globalAlpha = 1; folio(g, 4, false); };
 const pageBlank = (g) => { pageBase(g); folio(g, 5, true); };
 
 /* ---- Optik form (tek seferlik çizim; işaretler 3B daireler) ---- */
@@ -97,15 +97,15 @@ export async function mountStory(container) {
   const [bookGltf, pencilGltf] = await Promise.all([loader.loadAsync(BOOK_URL), loader.loadAsync(PENCIL_URL)]);
 
   const renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.outputColorSpace = SRGBColorSpace; renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
+  renderer.outputColorSpace = SRGBColorSpace; renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = 0.88;
   renderer.shadowMap.type = PCFSoftShadowMap;
   const el = renderer.domElement; el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block'; el.setAttribute('aria-hidden', 'true'); container.appendChild(el);
   const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
   const scene = new Scene();
-  const pm = new PMREMGenerator(renderer); const envRT = pm.fromScene(new RoomEnvironment(), 0.04); scene.environment = envRT.texture; scene.environmentIntensity = 0.55; pm.dispose();
+  const pm = new PMREMGenerator(renderer); const envRT = pm.fromScene(new RoomEnvironment(), 0.04); scene.environment = envRT.texture; scene.environmentIntensity = 0.4; pm.dispose();
   scene.add(new HemisphereLight(0xd6f5ea, 0x07151a, 0.3));
-  const key = new DirectionalLight(0xfff1de, 2.1); key.position.set(3, 9, 5); key.castShadow = true; key.shadow.radius = 5; key.shadow.bias = -0.0003; key.shadow.normalBias = 0.02;
+  const key = new DirectionalLight(0xfff1de, 1.6); key.position.set(3, 9, 5); key.castShadow = true; key.shadow.radius = 5; key.shadow.bias = -0.0003; key.shadow.normalBias = 0.02;
   Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 30 }); scene.add(key);
   const gov = governor(renderer, key, { onChange: () => { resize(); scene.traverse((o) => { [].concat(o.material || []).forEach((m) => { m.needsUpdate = true; }); }); render(last); } });
   const rim = new DirectionalLight(0x22d3ee, 1.4); rim.position.set(-6, 3, -5); scene.add(rim);
@@ -126,7 +126,7 @@ export async function mountStory(container) {
   const baseCv = document.createElement('canvas'); baseCv.width = PW; baseCv.height = PH; drawTypedBase(baseCv.getContext('2d'));
   const typedCv = document.createElement('canvas'); typedCv.width = PW; typedCv.height = PH; const tg = typedCv.getContext('2d'); tg.drawImage(baseCv, 0, 0);
   const typedTex = canvasTex(PW, PH, () => {}, renderer); typedTex.image = typedCv; typedTex.anisotropy = aniso; typedTex.needsUpdate = true;
-  const lines = wrapLines(tg, TYPED, 640);
+  const lines = wrapLines(tg, TYPED, 636);
   const blank = tex(pageBlank);
   const pages = [makePage(typedTex, tex(pageReasons)), makePage(tex(pageStrength), tex(pagePlan)), makePage(blank, blank)];
   pages.forEach((p) => bookG.add(p));
@@ -166,7 +166,7 @@ export async function mountStory(container) {
 
     // defter: düşer, açılır (kapak masaya iner), sol sayfa yığını pürüzsüzce büyür; sayfalar bükülerek çevrilir
     const intro = easeOut(s.intro), open = ease(s.open), k0 = ease(s.flip1), k1 = ease(s.flip2), e1 = ease(s.s1);
-    bookG.position.set(lerp(-W / 2, 0, open) - e1 * 16, lerp(2.4, 0, intro), lerp(0.8, 0, intro));
+    bookG.position.set(lerp(-W / 2, 0, open) - e1 * 16, lerp(1.3, 0, intro), lerp(0.5, 0, intro)); bookG.scale.setScalar(lerp(0.8, 1, intro));
     bookG.rotation.y = lerp(-0.9, -0.05, intro) - e1 * 0.4; bookG.visible = e1 < 0.995;
     coverPivot.rotation.z = open * Math.PI; coverPivot.position.set(-0.1 * Math.sin(Math.PI * open), lerp(COVER_Y, TABLE_COVER_Y, open), 0);
     const hl = 0.006 * smooth((open - 0.9) / 0.1) + 0.004 * (k0 + k1);
@@ -176,8 +176,8 @@ export async function mountStory(container) {
     // yazı: yalnız satırlar yeniden yazılır (hazır katman kopyalanır, gürültü yeniden üretilmez)
     const n = Math.floor(clamp01(s.type) * TYPED.length);
     if (n !== typedN) {
-      typedN = n; tg.drawImage(baseCv, 0, 0); tg.fillStyle = INK; tg.font = `500 36px ${FONT}`; tg.textAlign = 'left'; tg.textBaseline = 'alphabetic';
-      let left = n, y = 470; for (const ln of lines) { if (left <= 0) break; const part = ln.slice(0, left); tg.fillText(part, 64, y); left -= ln.length + 1; if (left <= 0 && n < TYPED.length) tg.fillText('▍', 64 + tg.measureText(part).width + 4, y); y += 54; }
+      typedN = n; tg.drawImage(baseCv, 0, 0); tg.fillStyle = INK; tg.font = `500 46px ${FONT}`; tg.textAlign = 'left'; tg.textBaseline = 'alphabetic';
+      let left = n, y = 500; for (const ln of lines) { if (left <= 0) break; const part = ln.slice(0, left); tg.fillText(part, 64, y); left -= ln.length + 1; if (left <= 0 && n < TYPED.length) tg.fillText('▍', 64 + tg.measureText(part).width + 4, y); y += 66; }
       typedTex.needsUpdate = true;
     }
 
@@ -200,7 +200,8 @@ export async function mountStory(container) {
     chart.rotation.y = lerp(-0.7, -0.15, ease(s.bars));
 
     // kamera: defter → form (yukarıdan) → grafik
-    const wideA = Math.max(wide * 1.12, 1.55 / aspect), A = [aspect < 1 ? -0.4 : 0.3, 6.6 * wideA, 7.6 * wideA, aspect < 1 ? -0.4 : 0, 0.1, 0.1], B = [0, 8.6 * wide, 5.4 * wide, 0, 0, 0.2], C = [0.3, 5.8 * wide, 11.8 * wide, 0, 1.3, 0];
+    const portrait = aspect < 0.9, fitD = 2.35 / (0.2867 * aspect), px = lerp(1.0, 0, ease(clamp01(s.flip1 * 1.3))), wideA = Math.max(wide * 1.12, 1.55 / aspect);
+    const A = portrait ? [px, fitD * 0.8, fitD * 0.6, px, 0.1, 0.1] : [0.3, 6.6 * wideA, 7.6 * wideA, 0, 0.1, 0.1], B = [0, 8.6 * wide, 5.4 * wide, 0, 0, 0.2], C = [0.3, 5.8 * wide, 11.8 * wide, 0, 1.3, 0];
     const k2 = ease(s.s2), m = (i) => lerp(lerp(A[i], B[i], e1), C[i], k2);
     camera.position.set(m(0), m(1), m(2)); camera.lookAt(m(3), m(4), m(5));
     glow.material.opacity = 0.36;

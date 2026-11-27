@@ -52,13 +52,17 @@ const Card = ({ className = '', children, ...p }) => <div className={`card ${cla
 const Label = ({ children }) => <div className="stat-label">{children}</div>;
 
 /* ---- Hero'daki panel parçası (örnek veri) ---- */
-const TREND = [62.5, 68, 71.25, 74.5, 78.5];
+const DEMO = {
+  TYT: { trend: [62.5, 68, 71.25, 74.5, 78.5], week: 14.5, soru: 63, avg: 74.4, best: 78.5, prog: 62, subj: [['Matematik', 72], ['Türkçe', 58], ['Fen Bilimleri', 41]] },
+  AYT: { trend: [38.25, 43.5, 47, 52.25, 56.75], week: 11, soru: 48, avg: 47.5, best: 56.75, prog: 54, subj: [['Matematik', 64], ['Fizik', 47], ['Edebiyat', 59]] },
+};
 const pts = (vals, w, h, lo = 55, hi = 90) => vals.map((v, i) => [(i * w) / (vals.length - 1), h - ((v - lo) / (hi - lo)) * h]);
 
-function MiniTrend() {
-  const p = pts(TREND, 320, 110); const d = p.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${(y + 6).toFixed(1)}`).join(' ');
+function MiniTrend({ trend }) {
+  const lo = Math.min(...trend) - 8, hi = Math.max(...trend) + 6;
+  const p = pts(trend, 320, 110, lo, hi); const d = p.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${(y + 6).toFixed(1)}`).join(' ');
   return (
-    <svg viewBox="0 0 320 128" className="h-[128px] w-full" role="img" aria-label="Net trendi: son beş denemede 62,5’ten 78,5’e yükseliş">
+    <svg viewBox="0 0 320 128" className="h-[128px] w-full" role="img" aria-label={`Net trendi: son beş denemede ${fmtTr(trend[0], 1)}’ten ${fmtTr(trend[trend.length - 1], 1)}’e yükseliş`}>
       <defs><linearGradient id="ln-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="rgb(var(--accent))" stopOpacity=".28" /><stop offset="1" stopColor="rgb(var(--accent))" stopOpacity="0" /></linearGradient></defs>
       {[0, 1, 2, 3].map(i => <line key={i} x1="0" x2="320" y1={10 + i * 36} y2={10 + i * 36} stroke="rgb(var(--fg) / .07)" />)}
       <path d={`${d} L320 128 L0 128 Z`} fill="url(#ln-area)" data-area />
@@ -69,38 +73,40 @@ function MiniTrend() {
 }
 
 function Mock() {
+  const [part, setPart] = useState('TYT');
+  const d = DEMO[part];
   const stats = [
-    [Flame, 'text-accent', 'Bu hafta', 14.5, 1, ' sa', '63 soru'],
-    [Target, 'text-cyan2', 'Ortalama net', 74.4, 1, '', 'Son 5 deneme'],
-    [Trophy, 'text-amber-300', 'En iyi net', 78.5, 1, '', 'TYT'],
-    [GraduationCap, 'text-accent', 'Müfredat', 62, 0, '', 'Tamamlanan konular'],
+    [Flame, 'text-accent', 'Bu hafta', d.week, 1, ' sa', `${d.soru} soru`],
+    [Target, 'text-cyan2', 'Ortalama net', d.avg, 1, '', 'Son 5 deneme'],
+    [Trophy, 'text-amber-300', 'En iyi net', d.best, 1, '', part],
+    [GraduationCap, 'text-accent', 'Müfredat', d.prog, 0, '', 'Tamamlanan konular'],
   ];
-  const subj = [['Matematik', 72], ['Türkçe', 58], ['Fen Bilimleri', 41]];
+  const subj = d.subj, delta = d.trend[d.trend.length - 1] - d.trend[0];
   return (
     <div className="relative" style={{ perspective: 1400 }} data-tilt>
       <Card className="!p-4 sm:!p-5" data-mock style={{ transformStyle: 'preserve-3d' }}>
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5"><Logo size={22} /><span className="text-sm font-semibold text-slate-100">Panel</span></div>
           <div className="inline-flex rounded-full border border-white/10 bg-white/[0.04] p-0.5 text-[11px] font-bold">
-            <span className="rounded-full bg-accent px-3 py-1 text-onaccent">TYT</span><span className="px-3 py-1 text-slate-400">AYT</span>
+            {['TYT', 'AYT'].map(p => <button key={p} type="button" onClick={() => setPart(p)} aria-pressed={part === p} className={`rounded-full px-3 py-1 transition-colors ${part === p ? 'bg-accent text-onaccent' : 'text-slate-400 hover:text-slate-100'}`}>{p}</button>)}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {stats.map(([Icon, tone, label, val, dec, unit, sub]) => (
-            <div key={label} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3">
+            <div key={`${part}-${label}`} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3">
               <div className="flex items-center justify-between"><span className="stat-label !text-[10px]">{label}</span><Icon size={14} className={tone} /></div>
               <div className="mt-1.5 text-xl font-semibold tracking-tight text-slate-50 num"><span data-count={val} data-dec={dec}>{fmtTr(val, dec)}</span>{unit}</div>
               <div className="mt-0.5 text-[10.5px] text-slate-400">{sub}</div>
             </div>))}
         </div>
         <div className="mt-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3.5">
-          <div className="mb-1 flex items-baseline justify-between"><Label>Net trendi · son 5 deneme</Label><span className="num text-xs text-accent">+16,0 net</span></div>
-          <MiniTrend />
+          <div className="mb-1 flex items-baseline justify-between"><Label>Net trendi · son 5 deneme</Label><span className="num text-xs text-accent">+{fmtTr(delta, 1)} net</span></div>
+          <MiniTrend key={part} trend={d.trend} />
         </div>
         <div className="mt-3 grid gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3.5">
           <Label>Konu ilerlemesi</Label>
           {subj.map(([n, v], i) => (
-            <div key={n}>
+            <div key={`${part}-${n}`}>
               <div className="mb-1 flex justify-between text-xs"><span className="text-slate-200">{n}</span><span className="num text-slate-400">%{v}</span></div>
               <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><div data-bar className={`h-full rounded-full ${i === 1 ? 'bg-cyan2' : 'bg-accent'}`} style={{ width: `${v}%` }} /></div>
             </div>))}

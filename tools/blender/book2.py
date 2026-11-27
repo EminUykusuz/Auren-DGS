@@ -32,7 +32,7 @@ def cloth_normal_image(size=256):
 
 
 def build_book():
-    cloth = mat('Cloth', '#0e8f6a', 0.66, 0, 0.0, Sheen_Weight=0.5)
+    cloth = mat('Cloth', '#05704f', 0.62, 0, 0.0)
     nt = cloth.node_tree; n = nt.nodes; l = nt.links
     t = n.new('ShaderNodeTexImage'); t.image = cloth_normal_image(); t.extension = 'REPEAT'
     mp = n.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (14, 14, 14); tc = n.new('ShaderNodeTexCoord')
@@ -41,7 +41,8 @@ def build_book():
     edge = mat('PagesEdge', '#ffffff', 0.93)
     et = edge.node_tree.nodes.new('ShaderNodeTexImage'); et.image = stripes_image(); et.extension = 'EXTEND'
     edge.node_tree.links.new(et.outputs['Color'], edge.node_tree.nodes['Principled BSDF'].inputs['Base Color'])
-    foil = mat('Foil', '#f1d27f', 0.3, 0.9)
+    foil = mat('Foil', '#f6d77c', 0.24, 0.92)
+    fb = foil.node_tree.nodes['Principled BSDF']; fb.inputs['Emission Color'].default_value = srgb('#f2b93b'); fb.inputs['Emission Strength'].default_value = 0.22
     endp = mat('Endpaper', '#f4efe0', 0.85)
     ribbon = mat('Ribbon', '#d84a5c', 0.55, 0, 0.0, Sheen_Weight=0.4)
 

@@ -113,7 +113,7 @@ function SceneCSS({ className = '' }) {
   }, []);
 
   return (
-    <div ref={root} aria-hidden="true" className={`s3 ${className}`}>
+    <div ref={root} aria-hidden="true" className={`s3 ${className}`} style={{ pointerEvents: 'none' }}>
       <div className="s3-cam">
         <div className="s3-tilt">
           <div data-a="scroll" className="s3-g"><div data-a="mouse" className="s3-g"><div data-a="idle" className="s3-g">
