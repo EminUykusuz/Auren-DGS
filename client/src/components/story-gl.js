@@ -117,6 +117,8 @@ export async function mountStory(container) {
   /* ----- Defter (Blender modeli) ----- */
   const bookG = new Group(); scene.add(bookG);
   const book = prep(bookGltf.scene); bookG.add(book);
+  // Omurga ve altın bantlar: defter açılınca kapakla birlikte alçalır (aksi hâlde sol sayfaların üstünde dik bir duvar gibi kalır)
+  const spine = [book.getObjectByName('Spine'), ...[0, 1, 2, 3].map(i => book.getObjectByName('SpineBand' + i))].filter(Boolean).map(o => ({ o, y: o.position.y, sy: o.scale.y }));
   const coverPivot = book.getObjectByName('CoverPivot'), blockMat = book.getObjectByName('Block').material;
   const topPaper = new MeshStandardMaterial({ color: 0xf1ecdd, roughness: 0.9 });
   const leftStack = new Mesh(new RoundedBoxGeometry(W - 0.02, 1, D - 0.07, 2, 0.006), [blockMat, blockMat, topPaper, topPaper, blockMat, blockMat]); leftStack.visible = false; leftStack.position.x = -W / 2; leftStack.receiveShadow = true; leftStack.castShadow = true; bookG.add(leftStack);
@@ -169,6 +171,7 @@ export async function mountStory(container) {
     bookG.position.set(lerp(-W / 2, 0, open) - e1 * 16, lerp(1.3, 0, intro), lerp(0.5, 0, intro)); bookG.scale.setScalar(lerp(0.8, 1, intro));
     bookG.rotation.y = lerp(-0.9, -0.05, intro) - e1 * 0.4; bookG.visible = e1 < 0.995;
     coverPivot.rotation.z = open * Math.PI; coverPivot.position.set(-0.1 * Math.sin(Math.PI * open), lerp(COVER_Y, TABLE_COVER_Y, open), 0);
+    const sp = lerp(1, 0.15, smooth((open - 0.3) / 0.4)); for (const p of spine) { p.o.scale.y = p.sy * sp; p.o.position.y = p.y * sp; }
     const hl = 0.006 * smooth((open - 0.9) / 0.1) + 0.004 * (k0 + k1);
     leftStack.visible = hl > 0.0008; leftStack.scale.y = Math.max(0.0005, hl); leftStack.position.y = COVER_TOP_OPEN + Math.max(0.0005, hl) / 2;
     pages[0].userData.pose(k0, START_Y[0], endY(0)); pages[1].userData.pose(k1, START_Y[1], endY(1));

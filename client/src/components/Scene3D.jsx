@@ -140,12 +140,16 @@ export default function Scene3D({ className = '' }) {
   useEffect(() => {
     let dispose = null, dead = false;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    import('./scene-gl.js').then(m => {
+    // Sayfa yenilenirken hero girişi (GSAP) ve ağır WebGL kurulumu aynı anda çalışıp takılıyordu: sahne, giriş animasyonu bitince ve tarayıcı boştayken kurulur
+    let timer = 0, idle = 0;
+    const boot = () => import('./scene-gl.js').then(m => {
       if (dead) return;
       if (!m.webglOk()) return setMode('css');
       try { dispose = m.mountScene(box.current, { reduced }); setMode('gl'); } catch (e) { console.error('[Scene3D]', e); setMode('css'); }
     }).catch(() => !dead && setMode('css'));
-    return () => { dead = true; dispose?.(); };
+    const arm = () => { timer = setTimeout(() => { if ('requestIdleCallback' in window) idle = requestIdleCallback(boot, { timeout: 2500 }); else boot(); }, 900); };
+    if (document.readyState === 'complete') arm(); else addEventListener('load', arm, { once: true });
+    return () => { dead = true; clearTimeout(timer); idle && cancelIdleCallback?.(idle); removeEventListener('load', arm); dispose?.(); };
   }, []);
   if (mode === 'css') return <SceneCSS className={className} />;
   return <div ref={box} aria-hidden="true" className={`relative ${className}`} style={{ pointerEvents: 'none' }} />;
