@@ -7,6 +7,7 @@ import {
   AdditiveBlending, DoubleSide, Clock,
 } from 'three';
 import { governor } from './perf.js';
+import { makeLoader } from './models.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
@@ -150,7 +151,12 @@ export function mountScene(container, { reduced = false } = {}) {
   let y = 0; const books = defs.map((d) => { const b = makeBook(renderer, d); const rest = y + d.h / 2; b.position.y = rest; b.rotation.y = d.rot; y += d.h; b.userData.rest = rest; world.add(b); return b; });
   const topY = y;
 
-  const pencil = makePencil(); const pencilRestY = topY + 0.125; pencil.position.set(-0.1, pencilRestY, 0.18); pencil.rotation.y = -0.5; world.add(pencil);
+  const pencil = new Group(), pencilRestY = topY + 0.1; pencil.position.set(-0.1, pencilRestY, 0.18); pencil.rotation.y = -0.5; pencil.visible = false; world.add(pencil);
+  // kalem: Blender modeli (src/assets/models/pencil.glb), yüklenince gruba eklenir; uç orijinde olduğu için ortalanır
+  makeLoader().loadAsync(new URL('../assets/models/pencil.glb', import.meta.url).href).then((g) => {
+    if (disposed) return; const m = g.scene; m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    m.scale.setScalar(0.95); m.position.x = -2.135 * 0.95; m.rotation.x = Math.PI / 6; pencil.add(m);
+  }).catch((e) => console.error('[Scene3D] kalem modeli', e));
   const sheet = makeSheet(renderer); const sheetRest = { x: 1.75, y: 1.8, z: -0.7 }; sheet.position.set(sheetRest.x, sheetRest.y, sheetRest.z); sheet.rotation.set(0, 0.22, 0.04); world.add(sheet);
 
   // süzülen balonlar (cevap kâğıdı baloncukları)

@@ -26,9 +26,9 @@ export default function Story() {
     const state = { intro: 0, open: 0, type: 0, flip1: 0, flip2: 0, s1: 0, fill: 0, s2: 0, bars: 0 };
 
     // sahne yalnızca bölüme yaklaşınca yüklenir (ağır paket)
-    const start = () => import('./story-gl.js').then(({ mountStory }) => {
-      if (dead) return;
-      api = mountStory(box.current); api.render(state);
+    const start = () => import('./story-gl.js').then(({ mountStory }) => mountStory(box.current)).then((made) => {
+      if (dead) { made.dispose(); return; }
+      api = made; api.render(state);
       ctx = gsap.context(() => {
         const chaps = gsap.utils.toArray('[data-chap]');
         const tl = gsap.timeline({
